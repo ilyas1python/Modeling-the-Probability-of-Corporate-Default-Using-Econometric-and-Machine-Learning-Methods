@@ -2,7 +2,7 @@
 
 ### Econometric vs. Machine Learning Methods on the Polish Companies Bankruptcy Dataset
 
-A bachelor's research paper (ICEF, HSE University) comparing classical accounting-based
+A research paper comparing classical accounting-based
 bankruptcy models against modern machine-learning classifiers under a single, unified,
 leakage-free evaluation protocol.
 
