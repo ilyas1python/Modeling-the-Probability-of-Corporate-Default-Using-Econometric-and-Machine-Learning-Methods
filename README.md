@@ -99,7 +99,7 @@ is permanent.
 | **ROC curves** at the 1-year horizon | **Precision-recall curves** — the gap is far larger here |
 | ![Feature grid](06_Feature_breadth_vs_nonlinearity.png) | ![Horizon decay](figures/fig_horizon.png) |
 | **Feature breadth vs. nonlinearity** decomposition | **Performance across prediction horizons** |
-| ![SHAP](08_XGBoost_SHAP_beeswarm.png) | ![Literature benchmark](figures/fig_litbenchmark.png) |
+| ![SHAP](08_XGBoost_SHAP_beeswarm.png) | ![Literature benchmark](05_Literature_benchmark_comparison.png) |
 | **XGBoost SHAP importances** | **Our results vs. published benchmarks** |
 
 ---
