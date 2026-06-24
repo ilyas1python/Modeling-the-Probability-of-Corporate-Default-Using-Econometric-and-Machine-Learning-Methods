@@ -104,19 +104,6 @@ is permanent.
 
 ---
 
-## Repository structure
-
-```
-.
-├── README.md                          # this file
-├── paper/
-│   └── bankruptcy_default.tex         # full LaTeX source of the paper
-├── notebook/
-│   └── bankruptcy_default.ipynb       # complete, runnable analysis notebook
-├── code/
-│   └── bankruptcy_pipeline.py         # linear Python export of the notebook
-└── figures/                           # all figures (PDF + PNG)
-```
 
 ## Reproducing the results
 
@@ -150,10 +137,3 @@ The dataset is from:
 
 > Zięba, M., Tomczak, S. K., & Tomczak, J. M. (2016). Ensemble boosted trees with synthetic features
 > generation in application to bankruptcy prediction. *Expert Systems with Applications*, 58, 93–101.
-
-If you use this work, please cite the paper (see `paper/bankruptcy_default.tex` for the full reference list).
-
-## License
-
-Released under the MIT License. The underlying dataset is distributed by the UCI Machine Learning
-Repository under its own terms.
