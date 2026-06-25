@@ -1,0 +1,3050 @@
+% !TEX program = xelatex
+% =============================================================================
+% Modeling the Probability of Corporate Default
+% Using Econometric and Machine Learning Methods
+% ICEF HSE formatting: Times New Roman 12pt, 1.5 spacing, A4
+%   left 35mm, right 15mm, top/bottom 20mm
+% COMPILE WITH XeLaTeX (needed for the Cyrillic title page and annotation).
+% =============================================================================
+
+\documentclass[12pt,a4paper]{article}
+
+% -------- fonts and languages (XeLaTeX) --------
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+\setotherlanguage{russian}
+% Times New Roman covers both Latin and Cyrillic. If it is not installed
+% (e.g. on some Overleaf images), replace the three font lines below with a
+% metric-compatible open substitute, e.g. "Liberation Serif".
+\setmainfont{Times New Roman}
+\newfontfamily\cyrillicfont{Times New Roman}
+\newfontfamily\cyrillicfonttt{Times New Roman}
+
+\usepackage[a4paper,
+            left=35mm,
+            right=15mm,
+            top=20mm,
+            bottom=20mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{float}
+\usepackage[section]{placeins}
+\usepackage[round]{natbib}
+\usepackage{setspace}
+\usepackage{listings}         % for the code appendix
+\usepackage{xcolor}
+\usepackage{tocloft}          % for table of contents formatting
+\usepackage{titlesec}         % section heading control
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue,
+}
+
+% -------- ICEF spacing and paragraph --------
+\onehalfspacing
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{16pt}
+
+% -------- caption format: "Table N. Title" / "Figure N. Title" --------
+\captionsetup[table]{
+  labelsep=period,
+  name=Table,
+  position=above,
+  justification=raggedright,
+  singlelinecheck=false,
+}
+\captionsetup[figure]{
+  labelsep=period,
+  name=Figure,
+  position=below,
+  justification=centering,
+}
+
+% -------- listings style for the Python code appendix --------
+\definecolor{codegreen}{rgb}{0.0,0.5,0.0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.55,0.0,0.55}
+\definecolor{codeblue}{rgb}{0.0,0.0,0.65}
+\lstdefinestyle{python}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codeblue}\bfseries,
+  commentstyle=\color{codegreen}\itshape,
+  stringstyle=\color{codepurple},
+  numberstyle=\tiny\color{codegray},
+  numbers=left,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=true,
+  frame=single,
+  rulecolor=\color{codegray},
+  columns=fullflexible,
+  keepspaces=true,
+  tabsize=4,
+}
+
+\begin{document}
+
+% ============================================================
+%  TITLE PAGE  (ICEF Annex 8 template, Russian)
+% ============================================================
+\begin{titlepage}
+\begin{center}
+\onehalfspacing
+{\small\textrussian{%
+ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ АВТОНОМНОЕ\\
+ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ\\
+«НАЦИОНАЛЬНЫЙ ИССЛЕДОВАТЕЛЬСКИЙ УНИВЕРСИТЕТ\\
+«ВЫСШАЯ ШКОЛА ЭКОНОМИКИ»\\[10pt]
+Международный институт экономики и финансов}\\
+}
+\vfill
+{\large\textrussian{Тагиров Ильяс Ильдарович}}\\[26pt]
+{\Large\bfseries\textrussian{МОДЕЛИРОВАНИЕ ВЕРОЯТНОСТИ\\[4pt]
+КОРПОРАТИВНОГО ДЕФОЛТА\\[4pt]
+С ИСПОЛЬЗОВАНИЕМ МЕТОДОВ ЭКОНОМЕТРИКИ И\\[4pt]
+МАШИННОГО ОБУЧЕНИЯ}}\\[14pt]
+{\large (Modeling the Probability of Corporate Default Using\\
+Econometric and Machine Learning Methods)}\\[34pt]
+{\normalsize\textrussian{%
+Курсовая работа\\[6pt]
+по направлению подготовки 38.03.01 «Экономика»\\
+образовательная программа «Международная программа\\
+по экономике и финансам»}\\
+}
+\vfill
+{\normalsize\textrussian{Москва, 2026}}\\[18pt]
+\end{center}
+\begin{flushright}
+{\normalsize\textrussian{%
+Научный руководитель\\
+Каныгина Надежда Геннадьевна}\\[20pt]
+\rule{60mm}{0.4pt}\\
+\hspace{6mm}подпись \hspace{26mm} дата
+}
+\end{flushright}
+\end{titlepage}
+
+% ============================================================
+%  ABSTRACT (English) + ANNOTATION (Russian) + TABLE OF CONTENTS
+%  ICEF order: title page -> abstract -> annotation -> contents
+% ============================================================
+\newpage
+\begin{abstract}
+\noindent
+This paper compares classical econometric bankruptcy models with modern
+machine-learning classifiers on the Polish Companies Bankruptcy dataset of
+\cite{zieba2016}. The main empirical finding is that missing financial-ratio
+values are not merely a nuisance to be imputed away: the pattern of
+non-disclosure is itself a strong distress signal, appearing among the largest
+LASSO coefficients and among the most important XGBoost features. We therefore treat missingness as an informative component of corporate
+default prediction, grounding the approach in Rubin's missing-data taxonomy
+and the missing-indicator method rather than claiming it as new
+\citep{rubin1976,jones1996}. The second contribution is to separate the
+machine-learning advantage into two parts: access to a broader 75-variable
+information set, including missingness flags, and the additional nonlinear
+modeling power of tree ensembles. The third contribution is a unified,
+leakage-free benchmark. We re-estimate Altman, Ohlson, and Zmijewski-style
+models and compare them with LASSO, random forest, and XGBoost using the same
+stratified folds, fold-internal imputation, class-weighted training, and the
+same discrimination, calibration, and cost metrics. The results show that
+XGBoost dominates the classical models, but also that a large part of this gap
+comes from feature breadth and informative missingness, not from algorithmic
+flexibility alone.
+\end{abstract}
+
+\begin{otherlanguage}{russian}
+\begin{center}
+\textbf{Аннотация}
+\end{center}
+\noindent
+В работе сравниваются классические эконометрические модели банкротства и
+современные классификаторы машинного обучения на наборе данных о банкротстве
+польских компаний \cite{zieba2016}. Основной эмпирический результат состоит в
+том, что пропущенные значения финансовых коэффициентов не являются просто
+помехой, которую нужно восполнить: сам факт отсутствия отчётности является
+сильным сигналом неблагополучия и проявляется как среди наибольших
+коэффициентов LASSO, так и среди наиболее важных признаков XGBoost. Поэтому мы
+рассматриваем пропуски как информативную составляющую прогнозирования дефолта,
+опираясь на классификацию пропущенных данных Рубина и метод индикаторов
+пропусков, не претендуя на новизну самого метода \citep{rubin1976,jones1996}.
+Второй вклад работы состоит в разложении преимущества машинного обучения на две
+части: доступ к более широкому набору из 75 переменных, включая индикаторы
+пропусков, и дополнительную нелинейную выразительность древесных ансамблей.
+Третий вклад — единый и защищённый от утечки протокол сравнения. Мы заново
+оцениваем модели типа Альтмана, Ольсона и Змиевски и сравниваем их с LASSO,
+случайным лесом и XGBoost на одних и тех же стратифицированных разбиениях, с
+восполнением пропусков внутри каждого разбиения, с взвешиванием классов и с
+одними и теми же метриками различения, калибровки и стоимости ошибок.
+Результаты показывают, что XGBoost превосходит классические модели, но большая
+часть этого разрыва объясняется широтой набора признаков и информативностью
+пропусков, а не только гибкостью алгоритма.
+\end{otherlanguage}
+
+\clearpage
+\tableofcontents
+\clearpage
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+When a company goes bankrupt, the consequences spread widely. Creditors lose
+money, suppliers lose customers, employees lose jobs, and investors absorb
+losses. When many firms fail at the same time, as happened during the
+2007-2009 financial crisis, the effects ripple through the broader economy.
+This is why predicting corporate bankruptcy has been an active research area
+for over fifty years, attracting work from academics, regulators, and
+practitioners alike
+\citep{altman1968, ohlson1980, zmijewski1984, shumway2001, campbell2008,
+barboza2017, zieba2016, mai2019}.
+
+\subsection{Two strands of research}
+
+The literature falls into two broad approaches. The first is
+\textbf{econometric}: it uses financial ratios from company accounts and
+estimates formal statistical models with interpretable coefficients. The key
+early contributions are \cite{altman1968}, who used five accounting ratios
+and a technique called multiple discriminant analysis to classify 66 U.S.\
+manufacturing firms as bankrupt or healthy; \cite{ohlson1980}, who moved to
+logistic regression with nine variables and a much larger sample of 2,163
+firms (105 bankrupt, 2,058 healthy) over 1970-1976; and
+\cite{zmijewski1984}, who used a probit model with three ratios on 840 firms
+over 1972-1978. \cite{shumway2001} extended this tradition by treating
+bankruptcy as a time process using a hazard model, which allows the
+predictors to change over time and correctly handles firms that are observed
+for different numbers of years. These models are valued for their
+transparency: a coefficient tells you directly how a change in, say,
+retained earnings relative to total assets affects the probability of failure.
+
+The second approach is \textbf{machine learning} (ML). Starting in the
+late 1980s with neural networks \citep{odom1990} and expanding to support
+vector machines \citep{shin2005, min2005}, random forests \citep{barboza2017},
+gradient-boosted trees \citep{zieba2016, carmona2019}, and more recently
+deep learning \citep{mai2019, pellegrino2024}, ML methods have been applied
+to bankruptcy prediction with growing frequency. The common finding across
+these studies is that ML models achieve higher out-of-sample discrimination
+than classical econometric benchmarks, as measured by the area under the
+ROC curve (AUC).
+
+\subsection{A problem with existing comparisons}
+
+The claim that ``ML beats logit'' is now widespread. However, looking closely
+at how existing studies conduct their comparisons reveals that the ML and
+econometric models are usually not tested under the same conditions. Three
+differences appear regularly.
+
+\textbf{Imbalance handling.} Bankruptcy is a rare event. In most datasets,
+fewer than 5\% of firms go bankrupt in any given year, and often fewer than
+1\% \citep{shumway2001}. Many ML studies deal with this imbalance by
+resampling the training data, either by randomly removing healthy firms
+until the classes are roughly equal (undersampling, as in
+\citealt{pellegrino2022}), or by generating synthetic bankrupt firms via
+SMOTE \citep{chawla2002}. The econometric baseline, meanwhile, is usually
+fitted on the original imbalanced data. This creates a hidden problem: a model trained on 50/50 balanced data will
+produce predicted probabilities that are too high when applied to a real-world
+dataset where the default rate is around 4\% \citep{king2001, saerens2002}.
+The model may rank firms well but will be poorly calibrated.
+
+\textbf{Feature set.} ML models are often given many more input variables
+than the econometric baseline. An ML model with 64 features that outperforms
+a 5-variable Altman logit is providing evidence about the value of those
+extra features, not necessarily about ML algorithms being intrinsically
+superior.
+
+\textbf{Evaluation metric.} Most studies report only the AUC, which measures
+how well a model \emph{ranks} firms by risk. A model can rank firms well but
+still produce badly wrong probability estimates. Calibration metrics, which
+test whether a model's predicted probability of 10\% actually corresponds to
+a 10\% observed default rate, capture a different and equally important
+dimension of performance. Reporting only AUC hides this.
+
+\subsection{This paper's contribution}
+
+We revisit the ML-vs-econometric question using the Polish Companies
+Bankruptcy dataset of \cite{zieba2016}. The contribution is not simply that we
+run several models and compare their AUCs. That would be a useful benchmark,
+but it would not be enough as a research contribution. The paper's contribution
+is more specific and rests on three claims.
+
+\begin{enumerate}
+
+\item \textbf{Informative missingness as a distress signal.} We show that the
+pattern of missing financial-ratio values predicts bankruptcy and should be
+interpreted economically, not treated only as a preprocessing inconvenience.
+This is the strongest empirical result in the paper: firms close to bankruptcy
+are much more likely to have missing ratio values, the missingness indicators
+receive some of the largest LASSO coefficients, and they also appear among the
+important XGBoost features. Methodologically, this is an application of the
+missing-indicator method and of the idea that data may be missing not at random
+(MNAR) \citep{rubin1976,jones1996,little2019}. The novelty claimed here is
+therefore not the indicator technique itself, but its use and interpretation as
+a corporate-distress signal in this bankruptcy dataset.
+
+\item \textbf{Disentangling feature breadth from algorithmic power.} Existing
+ML-vs-econometric comparisons often give the ML model a much richer feature set
+than the classical benchmark, and then attribute the entire gain to the
+algorithm. We separate these two effects. A logit estimated on a broad feature
+set tests how much is gained from additional accounting information and
+missingness flags while keeping the model linear. XGBoost on the same broad
+feature set then tests how much is gained from nonlinear thresholds and
+interactions. This matters because \cite{barboza2017} also show that adding
+complementary financial indicators materially improves default prediction; our
+analysis makes that feature-breadth channel explicit on the Polish dataset.
+
+\item \textbf{A unified and leakage-free evaluation protocol.} We apply one
+protocol to all models: stratified five-fold cross-validation, training-fold
+median imputation, class-weighted loss functions rather than pre-split
+resampling, and the same set of discrimination, calibration, and economic-cost
+metrics. This directly addresses a common weakness in the literature, where ML
+models and econometric baselines are often evaluated under different feature
+sets, different imbalance treatments, or different metrics \citep{hand2009,
+king2001}. The aim is not to give ML a favorable comparison,
+but to make the comparison hard to dismiss.
+
+\end{enumerate}
+
+The paper proceeds as follows. Section~\ref{sec:lit} reviews the
+accounting-based and ML literatures and explains the methodological problems
+with existing comparisons. Section~\ref{sec:data} describes the data.
+Section~\ref{sec:methodology} specifies the models and evaluation protocol.
+Section~\ref{sec:results-econ} reports the re-estimated econometric baselines
+and Section~\ref{sec:results-ml} the machine-learning models and the full
+comparison. Section~\ref{sec:figures} presents the figures and the
+Brier-score decomposition, Section~\ref{sec:horizons} examines performance
+across prediction horizons, and Section~\ref{sec:shap} interprets the XGBoost
+model with SHAP values. Section~\ref{sec:robustness} reports robustness
+checks and Section~\ref{sec:conclusion} concludes.
+
+\clearpage
+% =============================================================================
+\section{Literature Review}\label{sec:lit}
+% =============================================================================
+
+We organize the literature into five parts: classical accounting-based models,
+hazard and panel models, machine-learning models, evaluation methodology, and
+missing data in distress prediction. The paper sits at the intersection of all
+five: it compares prediction models, asks whether the comparison is fair,
+considers what a proper panel design would look like, and treats missingness
+as a signal rather than a nuisance.
+
+\subsection{Classical accounting-based models}
+
+\paragraph{Altman (1968): multiple discriminant analysis.}
+\cite{altman1968} is the founding paper of quantitative bankruptcy prediction.
+Altman worked with 66 publicly traded U.S.\ manufacturing firms, 33 that had
+filed for bankruptcy under Chapter~X of the National Bankruptcy Act between
+1946 and 1965, matched to 33 healthy firms of similar size and industry.
+He applied \textit{multiple discriminant analysis} (MDA), a technique from
+\cite{fisher1936} that finds the linear combination of variables that best
+separates two groups, assuming they follow a joint normal distribution with
+equal covariances. Starting from 22 candidate ratios, he selected five. The resulting \textit{Z-score} is:
+\begin{equation}
+Z = 1.2 \cdot X_1 + 1.4 \cdot X_2 + 3.3 \cdot X_3 + 0.6 \cdot X_4 + 1.0 \cdot X_5
+\label{eq:altman}
+\end{equation}
+where $X_1$ is working capital over total assets, $X_2$ is retained earnings
+over total assets, $X_3$ is EBIT over total assets, $X_4$ is the market value
+of equity over total liabilities, and $X_5$ is sales over total assets. A firm
+with $Z < 1.81$ was classified as likely to fail; above $2.99$ as likely to
+survive; the range in between was called the ``zone of ignorance.'' Altman
+reported 95\% accuracy one year before bankruptcy and 72\% two years before,
+on his matched sample.
+
+The Z-score has been updated several times, including versions for private and
+non-manufacturing firms \citep{altman2000}, and remains widely used in
+professional credit analysis. Its main weaknesses are the normality and equal-covariance assumptions,
+the distortion from matched sampling when the real bankruptcy rate is far
+below 50\%, and the use of market capitalization, which is unavailable
+for private firms.
+
+\paragraph{Ohlson (1980): logistic regression.}
+\cite{ohlson1980} addressed the limitations of MDA by switching to logistic
+regression. Unlike MDA, the logit model makes no distributional assumption
+and directly estimates the probability that a firm goes bankrupt:
+\begin{equation}
+\Pr(y_i = 1 \mid \mathbf{x}_i) =
+\frac{1}{1 + \exp(-\mathbf{x}_i^\top \boldsymbol{\beta})},
+\label{eq:logit}
+\end{equation}
+where $y_i = 1$ indicates bankruptcy, $\mathbf{x}_i$ is the vector of
+predictors, and $\boldsymbol{\beta}$ is estimated by maximum likelihood.
+Ohlson used 105 bankrupt and 2,058 non-bankrupt U.S.\ industrial firms from
+Compustat over 1970-1976. His nine predictors included size, leverage,
+working capital, liquidity, profitability, cash flow, a negative-book-equity
+indicator, and two variables requiring prior-year information. These improvements over Altman, a larger sample, no distributional assumption,
+and direct probability output, made the O-score the standard academic benchmark.
+
+\paragraph{Zmijewski (1984): probit regression.}
+\cite{zmijewski1984} proposed a three-variable probit model. The probit is
+closely related to the logit, but uses the standard normal cumulative
+distribution function rather than the logistic CDF:
+\begin{equation}
+\Pr(y_i = 1 \mid \mathbf{x}_i) =
+\Phi\!\left(\mathbf{x}_i^\top \boldsymbol{\beta}\right),
+\label{eq:probit}
+\end{equation}
+where $\Phi(\cdot)$ is the standard normal CDF. Zmijewski's predictors are net
+income over total assets, total liabilities over total assets, and current
+assets over current liabilities. The model is simple but important because it explicitly addresses choice-based
+sampling bias: when bankrupt firms are overrepresented in the sample, the
+intercept is biased but the slope coefficients remain consistent. Later work
+finds that no single specification consistently outperforms the others, which
+is why we evaluate all three side by side \citep{mossman1998}.
+
+\subsection{Hazard and panel models}
+
+\cite{shumway2001} argued that single-period models are statistically
+inconsistent for bankruptcy prediction because firms are observed over time
+and may survive, fail, or exit the sample. The right framework is a
+\textit{discrete-time hazard model}, which estimates the probability of
+failure in period $t$ conditional on having survived to $t$. Shumway showed
+that this can be run as a pooled logit on firm-year observations, with
+time-varying covariates. On U.S.\ data, several classical accounting ratios
+lost significance once the hazard structure was imposed, while market variables
+such as firm size, past returns, and idiosyncratic volatility became strong
+predictors.
+
+\cite{chava2004} extend this logic by adding industry effects and show that
+industry differences affect both baseline failure risk and the slopes on key
+variables. \cite{campbell2008} develop a dynamic logit model using both
+accounting and market information, including leverage, profitability, market
+capitalization, past returns, volatility, cash, market-to-book, and price per
+share, and show that these variables capture much of the time variation in
+aggregate failure rates. The implication for our paper is direct: a hazard model is the modern
+econometric benchmark. It is not feasible here because the Polish dataset is
+anonymized and provides no firm identifiers or calendar-year stamps, as
+explained in Section~\ref{sec:panel-limits}.
+
+\subsection{Machine-learning models for bankruptcy prediction}
+
+ML methods were first applied to bankruptcy prediction in the late 1980s with
+simple neural networks \citep{odom1990}. The field has since expanded to
+include further neural-network distress models \citep{altman1994}, support
+vector machines \citep{shin2005, min2005}, tree ensembles
+\citep{barboza2017,jones2017}, gradient boosting \citep{zieba2016,
+carmona2019}, and recurrent neural networks \citep{mai2019,pellegrino2024}.
+Recent surveys confirm that this literature has grown quickly. \cite{dasilas2024}
+review 207 empirical bankruptcy-prediction studies from 2012 to mid-2023,
+covering the rapid shift toward ensemble and hybrid machine-learning methods.
+
+\cite{barboza2017} compared several ML methods, including support vector
+machines, random forests, bagging, boosting, and neural networks, against
+logistic regression and discriminant analysis on a large sample of North
+American firms. They found that ML methods were roughly 10 percentage points
+more accurate than traditional models. Crucially for this paper, they also
+show that adding complementary financial indicators to the classic Altman
+variables materially raises performance. That finding supports our argument
+that part of the ML advantage is really a feature-breadth advantage.
+
+\cite{jones2017} evaluate 16 statistical and machine-learning classifiers and
+find that newer ensemble learners such as generalized boosting, AdaBoost, and
+random forests perform best, while simple logit and discriminant models still
+remain useful benchmarks. \cite{zieba2016}, whose dataset we use, applied
+XGBoost to Polish firms observed between 2000 and 2013 and reported AUC values
+of 0.93-0.96 across the five prediction horizons. Their result is the starting
+point for our paper, but we differ in focus: we compare econometric and ML
+models under one protocol and then separate feature breadth from nonlinear
+modeling power.
+
+\cite{pellegrino2022} applied deep neural networks and tree ensembles to U.S.\
+public companies over 1999-2018, with the best model reaching AUC 0.85.
+However, their training protocol balanced the sample to 50/50 by dropping
+healthy firms. As \cite{king2001} showed, this inflates predicted probabilities
+unless the intercept is corrected. We treat such results as evidence that ML
+can help, but also that protocol consistency matters.
+
+\subsection{Evaluation methodology: imbalance, leakage, and metrics}
+
+Bankruptcy prediction is inherently an imbalanced classification problem, and
+a body of statistical work warns against ignoring this. \cite{saito2015}
+showed that PR-AUC is more informative than ROC-AUC when the minority class is
+rare. ROC-AUC measures ranking over the whole sample, while PR-AUC directly
+asks whether the firms flagged as risky are actually bankrupt. \cite{hand2009}
+argues that even AUC itself is not always a coherent measure of classifier
+performance, which supports reporting a battery of metrics rather than one
+headline number.
+
+\cite{king2001} documented how balanced-sample training inflates absolute
+probability estimates. \cite{niculescu2005} showed that even strong ranking
+models such as random forests can produce poorly calibrated probabilities.
+These issues are why we report both discrimination and calibration metrics,
+including the Brier score, reliability diagrams, expected calibration error,
+and post-hoc isotonic recalibration.
+
+A separate problem is data leakage. Resampling methods such as SMOTE
+\citep{chawla2002} must be applied inside the training fold only. Applying
+SMOTE before the train/test split lets synthetic observations carry information
+from the validation data into training, inflating reported performance. The
+same logic applies to imputation and scaling, which must be fit on training
+data alone. Our evaluation protocol therefore fits
+imputation, scaling, and any resampling operation inside each cross-validation
+fold only.
+
+\subsection{Missing data in distress prediction}
+
+The strongest novel element of this paper is not that we impute missing values,
+but that we treat the missingness pattern as economically informative. The
+statistical foundation is Rubin's taxonomy of missing completely at random,
+missing at random, and missing not at random \citep{rubin1976}, developed
+further in \cite{little2019}. In corporate bankruptcy data, missingness can
+plausibly be MNAR: the value may be absent precisely because the firm is in
+financial trouble, because the denominator of a ratio is zero or very small,
+or because reporting discipline deteriorates as the firm approaches failure.
+
+The missing-indicator method, adding a binary flag for each missing value,
+is a long-standing technique \citep{jones1996}. In prediction it is useful
+because missing data can carry information that would be discarded if the
+row were simply dropped. \cite{granularimputation2024} apply this idea
+directly to the Polish dataset and confirm that missingness patterns matter.
+We use missingness indicators as a predictive feature, while being clear
+that the method itself is not new.
+
+\subsection{Where this paper fits}
+
+The gap in the literature is specific. A large body of empirical work has
+established that ML methods produce higher out-of-sample AUC than classical
+accounting-ratio models \citep{barboza2017, jones2017, dasilas2024}. That
+finding is not in dispute here. What is disputed is whether the reported gaps
+are as large and robust as they appear, and what is actually driving them.
+
+Three problems recur in the comparison literature.
+First, ML models are typically given access to many more features than the
+econometric baseline; the performance gap therefore reflects both algorithmic
+power and information advantage, and most studies do not separate these.
+Second, imbalance is often handled differently across models: some studies
+balance the training sample for ML models but not for the logit baseline,
+or apply SMOTE before the train/test split, inflating the reported ML
+performance \citep{king2001, chawla2002}. Third, most studies report only
+ROC-AUC, which is relatively insensitive to the handling of the rare positive
+class; PR-AUC and calibration metrics tell a more complete story
+\citep{saito2015, hand2009}.
+
+The Polish dataset is a natural setting for addressing these problems because
+it is the most widely used public benchmark for this literature, covering more
+than 40,000 firm-horizon observations from an emerging market with significant
+variation in macro conditions. \cite{zieba2016} used it to introduce XGBoost
+to bankruptcy prediction and reported AUC values of 0.93-0.96, but their
+study does not include re-estimated classical benchmarks, does not apply a
+unified evaluation protocol, and does not separate feature breadth from
+algorithmic flexibility. No subsequent study has filled all three gaps
+simultaneously on this dataset. This paper does, and in doing so offers a
+more precise account of where the ML advantage comes from and how much of it
+survives a controlled comparison.
+
+\clearpage
+% =============================================================================
+\section{Data}\label{sec:data}
+% =============================================================================
+
+\subsection{Source}
+
+We use the \textit{Polish Companies Bankruptcy} dataset originally compiled by
+\cite{zieba2016} and publicly available through the UCI Machine Learning
+Repository (dataset ID~365).\footnote{\url{https://doi.org/10.24432/C5F600};
+CC~BY~4.0 licence.} The underlying data come from the Emerging Markets
+Information Service (EMIS), a commercial database of corporate filings in
+emerging markets. Healthy firms are observed over fiscal years 2007-2013;
+bankrupt firms are observed in the years preceding their bankruptcy filings,
+which occurred between 2000 and 2012.
+
+The dataset provides 64 pre-computed financial ratios for each firm-year
+observation, covering liquidity, profitability, leverage, activity, and
+efficiency. Importantly, these ratios were computed by the original authors
+directly from the underlying financial statements, rather than being left for
+the researcher to construct. This avoids a common source of error in datasets
+that expose only raw accounting items, where the units of reported figures can
+differ across firms and years and produce meaningless ratios when divided
+directly.
+
+\subsection{Horizon structure}
+\label{sec:horizon-structure}
+
+The dataset is distributed as five separate files, one for each prediction
+horizon. The original file names are counterintuitive: \texttt{1year.arff} contains
+statements from the \emph{earliest} year of the forecasting window, while
+\texttt{5year.arff} contains statements from the \emph{latest} year,
+predicting bankruptcy within one year. To avoid confusion, we rename
+the files using the prediction horizon length:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+UCI file & Our label & Prediction horizon \\
+\midrule
+\texttt{5year.arff} & H1 & 1 year ahead  \\
+\texttt{4year.arff} & H2 & 2 years ahead  \\
+\texttt{3year.arff} & H3 & 3 years ahead  \\
+\texttt{2year.arff} & H4 & 4 years ahead  \\
+\texttt{1year.arff} & H5 & 5 years ahead  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent H1 is therefore the shortest and most informative prediction task
+(financial statements are close to the bankruptcy event), and H5 is the
+longest and least informative. H1 is our primary analysis horizon; H2-H5
+appear in the horizon-degradation analysis of Section~5.
+
+\subsection{Macroeconomic context of the observation windows}
+\label{sec:macro-context}
+
+The dataset provides no calendar year for individual observations, so
+macroeconomic variables cannot be merged at the firm-year level. Attaching,
+for example, GDP growth for a specific year to a specific row would be
+false precision. What we can do is describe the macro environment covered
+by the data and note how it may affect the baseline bankruptcy rate.
+
+Table~\ref{tab:polish-macro} reports the Polish macro series for 2000-2013,
+the period covered by the bankrupt and still-operating firms in the dataset.
+The window includes Poland's pre-crisis expansion, the 2008-2009 global crisis,
+and the slower post-crisis period. Poland is unusual in this period because it
+continued to record positive real GDP growth in 2009, while the EU as a whole
+fell into recession. This resilience does not remove macro risk from the data,
+but it means that the Polish default environment is not directly comparable to
+countries where the crisis produced a deep output collapse. Because individual
+observations carry no calendar date, macro variables cannot be merged at the
+firm-year level. They can, however, be attached at the level of the horizon
+window, since each of the five files corresponds to a different distance from
+the outcome and therefore to a different average position in the macro cycle.
+We use this horizon-level macro information in the pooled analysis of
+Section~\ref{sec:pooled}, where we also show that it is largely absorbed by
+the horizon dummies.
+
+\begin{table}[H]
+\centering
+\caption{Polish macroeconomic context, 2000--2013.\textsuperscript{*}}
+\label{tab:polish-macro}
+\small
+\resizebox{0.92\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrrrrrrrr}
+\toprule
+ & 2000 & 2001 & 2002 & 2003 & 2004 & 2005 & 2006 & 2007 & 2008 & 2009 & 2010 & 2011 & 2012 & 2013 \\
+\midrule
+Real GDP growth & 4.66 & 1.23 & 1.90 & 3.52 & 5.09 & 3.26 & 6.20 & 6.76 & 4.38 & 2.62 & 3.17 & 5.26 & 1.51 & 0.68 \\
+CPI inflation & 10.1 & 5.5 & 1.9 & 0.7 & 3.5 & 2.2 & 1.2 & 2.5 & 4.3 & 3.8 & 2.6 & 4.2 & 3.7 & 1.1 \\
+Unemployment & 15.1 & 17.5 & 20.0 & 20.0 & 19.0 & 17.6 & 14.8 & 11.2 & 9.5 & 12.1 & 12.4 & 12.5 & 13.4 & 13.4 \\
+NBP reference rate & 19.0 & 11.5 & 6.75 & 5.25 & 6.5 & 4.5 & 4.0 & 5.0 & 5.0 & 3.5 & 3.5 & 4.5 & 4.25 & 2.5 \\
+\bottomrule
+\end{tabular}%
+}
+\caption*{\footnotesize \textsuperscript{*} GDP growth and CPI inflation are annual
+percentages; unemployment is the registered year-end rate; the NBP reference
+rate is the year-end policy rate. Sources: World Bank national accounts, GUS
+(registered unemployment), National Bank of Poland.}
+\end{table}
+
+\subsection{Sample sizes and class imbalance}
+
+Table~\ref{tab:horizons} shows the sample sizes, bankruptcy counts, and
+default rates by horizon. Three features stand out.
+
+First, the bankruptcy rate is low across all horizons, ranging from 6.9\%
+at H1 to 3.9\% at H5. This reflects the fact that the shorter-horizon files
+contain a higher proportion of firms that are already in clear distress,
+while the longer-horizon files include many firms that will eventually fail
+but have not yet entered that phase.
+
+Second, all five horizons have a severely imbalanced class ratio, roughly
+14 healthy firms for every bankrupt one. This is the core imbalance problem
+that shapes our entire evaluation strategy.
+
+Third, the raw number of bankrupt firms is small: only 271 at H5 and 410 at
+H1. This matters because the effective statistical signal available to the
+models is driven by the minority class. A model trained on 271 bankrupt
+observations cannot reliably learn subtle nonlinear patterns; this should
+temper expectations about the practical benefit of adding model complexity.
+
+\begin{table}[ht]
+\centering
+\caption{Sample sizes and class balance by prediction horizon.\textsuperscript{*}}
+\label{tab:horizons}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+ & Obs. & Bankrupt & Rate (\%) & Complete rows & BR complete (\%) & BR incomplete (\%) \\
+\midrule
+H1 (1 yr ahead) & 5{,}910  & 410 & 6.94 & 3{,}031 & 3.37 & 10.70 \\
+H2 (2 yr ahead) & 9{,}792  & 515 & 5.26 & 4{,}769 & 2.52 &  7.86 \\
+H3 (3 yr ahead) & 10{,}503 & 495 & 4.71 & 4{,}885 & 2.19 &  6.91 \\
+H4 (4 yr ahead) & 10{,}173 & 400 & 3.93 & 4{,}088 & 1.79 &  5.37 \\
+H5 (5 yr ahead) & 7{,}027  & 271 & 3.86 & 3{,}194 & 0.94 &  6.29 \\
+\bottomrule
+\end{tabular}%
+}
+\caption*{\footnotesize \textsuperscript{*} The final two columns show the bankruptcy rate
+(BR) separately for complete and incomplete rows, documenting the informative
+missingness discussed in Section~\ref{sec:missing}. Source: author's
+calculations.}
+\end{table}
+
+\subsection{The 64 financial ratios}
+\label{sec:ratios}
+
+Each observation in the dataset contains 64 pre-computed ratios derived from
+the firm's annual financial statements. We rename the original variable codes
+(Attr1 to Attr64) to readable labels that reflect their economic meaning
+(e.g.\ \texttt{EBIT\_TA} for EBIT divided by total assets, \texttt{TL\_TA}
+for total liabilities over total assets).
+
+The 64 ratios include all five components of the \cite{altman1968} Z-score:
+
+\begin{itemize}
+\item \textbf{Working capital / Total assets}, Altman's $X_1$,
+      our \texttt{WC\_TA} (Attr3).
+\item \textbf{Retained earnings / Total assets}, Altman's $X_2$,
+      our \texttt{RE\_TA} (Attr6).
+\item \textbf{EBIT / Total assets}, Altman's $X_3$,
+      our \texttt{EBIT\_TA} (Attr7).
+\item \textbf{Book value of equity / Total liabilities}, Altman's $X_4$
+      (using book equity in place of market value for compatibility with
+      private firms), our \texttt{BE\_TL} (Attr8).
+\item \textbf{Sales / Total assets}, Altman's $X_5$,
+      our \texttt{sales\_TA} (Attr9).
+\end{itemize}
+
+Seven of the nine components of \cite{ohlson1980}'s O-score are also
+directly available (SIZE, TLTA, WCTA, CLCA, NITA, FUTL, and OENEG). The
+remaining two, INTWO (net income negative in both the current and prior
+year) and CHIN (normalized change in net income), require two consecutive
+observations for the same firm.\footnote{The dataset is anonymized: firms
+are not identified across rows, so it is impossible to link this year's
+observation with last year's for the same firm. This also rules out the
+\cite{shumway2001} discrete-time hazard model, which requires a panel
+structure.} Our Ohlson specification therefore uses seven of the original
+nine variables, which we document explicitly in the methodology section.
+All three components of \cite{zmijewski1984}'s X-score are present
+(NITA, TLTA, and the current ratio).
+
+\subsection{Missing values and what they signal}
+\label{sec:missing}
+
+Unlike some datasets where rows with missing values are dropped before
+release, the Polish data keep them. For most of the 64 ratios the missingness
+rate is negligible. One feature stands out: \texttt{CA\_inv\_LTL} (current
+assets minus inventories divided by long-term liabilities) is missing in 43\%
+of H1 rows, because firms with no long-term debt produce a division by zero.
+
+The important point is that this missingness is not random with respect to
+bankruptcy. Table~\ref{tab:horizons} shows, for each horizon, the bankruptcy
+rate among rows with no missing values (``complete rows'') and among rows
+with at least one missing value (``incomplete rows''). The gap is
+consistently large:
+
+\begin{itemize}
+\item At H1, the bankruptcy rate among incomplete rows (10.7\%) is
+      3.2 times the rate among complete rows (3.4\%).
+\item At H5, the gap is even larger: 6.3\% versus 0.9\%, a factor of 6.7.
+\end{itemize}
+
+This makes sense. Distressed firms may have no long-term debt, may
+restructure their balance sheet in ways that leave items undefined, or may
+simply become less disciplined in their reporting as they approach failure.
+A missing value is itself a signal of distress.
+
+Simply replacing missing values with the sample median, without recording
+that the value was missing, would throw away this information. We therefore adopt a two-step approach. First, for every
+feature that is missing in at least 1\% of rows in any horizon, we add a
+binary indicator column (e.g.\ \texttt{miss\_CA\_inv\_LTL}) that equals 1
+whenever the original value is missing. This produces 11 such indicator
+columns in total. Since these indicators are derived directly from the
+pattern of missing values, no model fitting is involved, they do not
+introduce any risk of data leakage and can safely be added before the
+cross-validation loop. Second, the missing values in the original ratio
+columns are filled with the \textit{training-fold median} during
+cross-validation, fitted on the training portion of each fold only
+(Section~\ref{sec:methodology}).
+
+As a robustness check (Section~7), we repeat the main analysis on the
+complete-case subsample (only rows with no missing values). This lets the
+reader judge whether our results are driven by the imputation choices or
+hold up on the fully observed data.
+
+\subsection{Panel structure: what we can and cannot do}
+\label{sec:panel-limits}
+
+A natural econometric extension is a discrete-time hazard model in the spirit
+of \cite{shumway2001}. In such a design, the unit of observation is a
+firm-year spell. For each firm and each year in which the firm is still alive,
+one estimates the probability that the firm fails in that period conditional
+on having survived up to the beginning of the period. Operationally, this can
+be estimated as a pooled logit with a time variable, period effects, and
+possibly time-varying accounting, market, industry, and macro covariates. This
+framework handles censoring more naturally than a static cross-section and is
+closer to the way bankruptcy risk evolves in reality. More recent multiperiod
+approaches, such as the forward-intensity model of \cite{duan2012}, extend the
+same idea to predict default probabilities over several future horizons at
+once.
+
+The dataset allows part of this idea to be implemented and rules out another
+part, and it is important to be clear about which is which.
+
+What we \emph{can} do is exploit the horizon structure of the five files. Each
+file corresponds to a different distance between the financial statement and
+the bankruptcy outcome, from one year (H1) to five years (H5). Pooling the
+files and adding a dummy for each horizon plays the role of the period effects
+in a hazard model: the dummies absorb the fact that the baseline default rate
+falls as the horizon lengthens. Going further, interacting the financial ratios
+with the horizon dummies, the slope-dummy idea, tests whether the same ratio
+carries the same meaning at every distance from the event, or whether its
+predictive content changes. We implement both of these in
+Section~\ref{sec:pooled}, and they produce one of the more interesting findings
+in the paper: the predictive power of the standard ratios is concentrated close
+to the event and fades as the horizon lengthens.
+
+What we \emph{cannot} do is estimate firm-level effects. The observations are
+anonymized, so there is no firm identifier, and there is no published key
+linking a firm's H1 observation to its H2, H3, H4, or H5 observation. Without a
+firm ID we cannot follow a single firm across years, cannot build a true risk
+set, cannot identify individual survival spells, and cannot estimate firm fixed
+effects that would absorb time-invariant unobserved heterogeneity such as
+business model or reporting quality. There is also no calendar-year stamp at
+the row level, so macroeconomic variables can be attached only at the level of
+the horizon window, not the individual firm-year. For the same reason, the two
+Ohlson variables that require prior-year information, INTWO and CHIN, cannot be
+reconstructed.
+
+The practical consequence is a clear division of labour. Horizon dummies, slope
+interactions, and horizon-level macro variables are feasible and are used.
+Firm fixed effects, firm-level macro merges, and a fully specified hazard model
+with market and industry controls would require a linkable panel such as
+Compustat, Amadeus, SPARK, or a V4FinBench-style dataset with firm identifiers
+and calendar time \citep{kostrzewa2025}. Extending the analysis to such data is
+the natural next step and would test whether the missingness effect documented
+here survives in a true panel.
+
+Within each horizon file, we use \textit{stratified five-fold
+cross-validation} as the primary evaluation framework: observations are
+divided into five folds with stratification on the bankruptcy label, so that
+each fold contains approximately the same proportion of bankrupt firms.
+Stratification matters because with only 271-515 bankrupt observations per
+horizon, a purely random split could produce folds with quite different class
+rates, adding unnecessary noise to the performance estimates.
+
+
+\subsection{Data limitations}
+\label{sec:data-limits}
+
+The dataset has several properties that set the boundaries of the analysis.
+It is useful to state them together.
+
+\paragraph{Anonymization.} Firms are identified only by a row number within
+each horizon file. There are no names, registration numbers, or any other
+identifier. This means all analysis is confined to the 64 pre-computed ratios provided.
+
+\paragraph{No calendar-year stamps.} Individual observations carry no date.
+The documentation states that bankrupt firms span 2000-2012 and
+still-operating firms span 2007-2013, but these are aggregate windows for
+the whole sample, not labels on individual rows. We cannot assign a
+specific year to any single observation, which rules out firm-level macro
+merges and firm-year panels.
+
+\paragraph{No market-based variables.} Modern default models such as
+\cite{shumway2001} and \cite{campbell2008} show that equity market variables,
+including market capitalization, past stock returns, idiosyncratic volatility,
+and distance-to-default in the spirit of \cite{merton1974}, carry substantial
+predictive information beyond accounting ratios. All firms in this dataset are
+private or anonymized, so equity prices are unavailable. This is a genuine limitation: part of what makes the three-variable
+econometric models look weak relative to the 75-variable ML model may simply
+be that the ML model sees more accounting information.
+
+\paragraph{No industry or firm-age information.} \cite{chava2004} show that
+default rates and the marginal impact of financial ratios differ across
+industries. Firm age is also a standard control in modern distress models.
+Neither is available here. The comparisons therefore use a limited set of controls and should be read
+as within-dataset benchmarks, not claims about the full information set.
+
+\paragraph{Potential overlap across horizon files.} The five files are defined
+by the length of the forecasting window, not by calendar time. It is possible
+that the same firm appears in more than one file, observed at different points
+before its eventual bankruptcy or survival. Without firm identifiers we cannot
+detect or adjust for this overlap, which means the five files should be treated
+as independent cross-sections rather than as panels.
+
+These limitations do not invalidate the analysis. The results show how much
+six model classes can extract from the same set of accounting ratios and
+missingness indicators, under a protocol that keeps the comparison fair. Extending
+the analysis to a dataset with firm identifiers, market data, and industry
+codes would be a natural next step; the V4FinBench benchmark of
+\cite{kostrzewa2025} is a candidate for this.
+
+\subsection{Descriptive statistics of the Altman ratios}
+\label{sec:descriptives}
+
+Before fitting any models, we check whether the five Altman ratios actually
+differ between bankrupt and healthy firms in the Polish data, and whether the
+direction matches theoretical expectations. Table~\ref{tab:descriptives}
+reports group means and standard deviations at H1, together with two tests
+of group separation: Welch's two-sample $t$-test and Cohen's $d$.
+
+\textbf{Why Welch's $t$-test?} The standard $t$-test assumes equal
+variances across groups. This is violated here: distressed firms show
+much more dispersed ratios than healthy ones (for example, the standard
+deviation of WC\_TA is 0.96 in the bankrupt group and only 0.29 in the
+non-bankrupt group). Welch's version \citep{welch1947} uses each group's
+own variance and adjusts the degrees of freedom accordingly. Under the null hypothesis that the two
+group means are equal, the test statistic is:
+\begin{equation}
+t = \frac{\bar{x}_A - \bar{x}_B}{\sqrt{s_A^2/n_A + s_B^2/n_B}}
+\label{eq:welch}
+\end{equation}
+where $\bar{x}$, $s^2$, and $n$ denote the mean, variance, and sample size
+of each group ($A$ = non-bankrupt, $B$ = bankrupt). A large $|t|$ and small
+$p$-value mean the observed gap between the group means is unlikely to be
+due to chance.
+
+\textbf{Why Cohen's $d$?} The $t$-statistic grows with sample size, so
+even tiny differences become significant in large samples. Cohen's $d$
+\citep{cohen1988} expresses the group difference in units of the pooled
+standard deviation, making it independent of sample size. Benchmarks:
+$|d| \approx 0.2$ is small, $0.5$ is medium, $0.8$ is large.
+
+Each ratio is winsorized at the 1st and 99th percentiles within each group
+before computing the statistics. Without this step, a small number of extreme
+outliers would distort the means and inflate the standard deviations.
+
+\begin{table}[ht]
+\centering
+\caption{Altman ratio means by bankruptcy status at H1.\textsuperscript{*}}
+\label{tab:descriptives}
+\small
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{Non-bankrupt} & \multicolumn{2}{c}{Bankrupt} & & & \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Ratio & Mean & SD & Mean & SD & $t$ & $p$ & Cohen's $d$ \\
+\midrule
+WC\_TA    & 0.239 & 0.288 & $-0.208$ & 0.956 &  9.41 & $<0.001$ &  0.632 \\
+RE\_TA    & 0.028 & 0.303 & $-0.411$ & 1.191 &  7.44 & $<0.001$ &  0.506 \\
+EBIT\_TA  & 0.078 & 0.143 & $-0.160$ & 0.470 & 10.19 & $<0.001$ &  0.684 \\
+BE\_TL    & 2.864 & 5.112 &  $1.876$ & 6.895 &  2.83 &    0.005 &  0.163 \\
+sales\_TA & 1.525 & 0.922 &  $1.802$ & 1.735 & $-3.20$ &  0.001 & $-0.200$ \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize Group sizes (after dropping NaN, before winsorization):
+non-bankrupt $n=5{,}498$, bankrupt $n=409$.}
+\caption*{\footnotesize \textsuperscript{*} Each ratio is winsorized at the 1st and 99th percentiles within its group. Welch's $t$-test allows for unequal group variances. Cohen's $d$ is the standardized mean difference ($|d|>0.2$ small, $>0.5$ medium, $>0.8$ large). Source: author's calculations (code in Annex 1).}
+\end{table}
+
+Three patterns emerge from the table.
+
+\paragraph{Four of five ratios move in the expected direction.} For WC\_TA,
+RE\_TA, EBIT\_TA, and BE\_TL, the mean is higher among non-bankrupt firms
+than among bankrupt firms, as theory predicts: bankrupt firms hold less
+working capital relative to assets, have accumulated losses rather than
+retained earnings, generate negative operating profits, and have lower equity
+relative to their liabilities. All four differences are statistically
+significant at the 1\% level.
+
+\paragraph{The strongest separators are the profitability ratios.} EBIT\_TA
+has the largest Cohen's $d$ at 0.68 (medium-to-large), followed by WC\_TA
+at 0.63 and RE\_TA at 0.51. This matches the finding in the original
+\cite{altman1968} paper that operating and cumulative profitability are the
+dominant predictors. BE\_TL has a $d$ of only 0.16 (small), which is
+consistent with its high variability, the standard deviations (5.1 and
+6.9) are much larger than the means (2.9 and 1.9), so the within-group
+spread swamps the across-group gap.
+
+\paragraph{The sales-to-assets ratio moves in the wrong direction.} In
+Altman's original Z-score, $X_5$ (sales over total assets) carries a
+positive coefficient: high asset turnover is taken as a sign of efficient
+operations and therefore lower bankruptcy risk. In our Polish H1 sample, the
+mean of sales\_TA is actually \emph{higher} among bankrupt firms (1.80 vs
+1.53, $t = -3.20$, $p = 0.001$). The most likely explanation is that distressed firms reduce their asset
+base in the final year before filing, selling or writing down assets, which
+mechanically raises sales-to-assets even as the firm deteriorates. This is
+a real contextual difference between the original U.S.\ 1960s setting and
+the Polish data, and the re-estimated Altman model is expected to produce a
+different sign on this variable.
+
+Overall, the descriptive analysis confirms that the Altman ratios carry real
+information about bankruptcy in the Polish data. Four of five ratios show
+medium-to-large effects in the expected direction, providing a solid
+foundation for the re-estimated models. The behavior of sales\_TA sets up
+a direct test of whether re-estimation adapts the framework to a new
+institutional context.
+
+\clearpage
+% =============================================================================
+\section{Methodology}\label{sec:methodology}
+% =============================================================================
+
+This section sets out the models we compare and the single evaluation
+protocol we apply to all of them. The central design principle is fairness:
+every model is trained and tested under identical conditions, so that any
+performance difference reflects the model itself and not differences in
+sampling, feature sets, or evaluation rules.
+
+\subsection{Notation and the prediction task}
+
+Let $i$ index a firm-year observation. The outcome is binary, $y_i = 1$ if
+the firm goes bankrupt within the relevant horizon and $y_i = 0$ otherwise.
+Each observation has a feature vector $\mathbf{x}_i$ containing the 64
+financial ratios plus the 11 missingness indicators introduced in
+Section~\ref{sec:missing}, for 75 candidate predictors in total. Every model produces an estimated bankruptcy probability
+$\hat{p}_i \in [0, 1]$, and we evaluate these under a common protocol.
+Each of the five horizons is treated as a separate prediction problem,
+with H1 as the primary horizon.
+
+\subsection{Model specifications}
+
+We compare six models in three families of increasing flexibility. The
+aim of this subsection is to clarify what each model is optimizing.
+
+\paragraph{Re-estimated econometric benchmarks.} The first family consists of
+the three classical models from Section~\ref{sec:lit}, re-estimated on the
+Polish data. We use \emph{re-estimated} coefficients rather than the original published
+weights because those weights were calibrated on U.S.\ firms in the 1960s
+and do not transfer directly to Polish firms from the 2000s.
+
+\begin{itemize}
+\item \textbf{Altman (logit).} A logistic regression on the five Altman ratios
+(WC\_TA, RE\_TA, EBIT\_TA, BE\_TL, sales\_TA). We deliberately use a logit
+rather than Altman's original discriminant analysis: the logit makes no
+normality assumption and outputs a probability on the same $[0,1]$ scale as
+every other model.
+
+\item \textbf{Ohlson (logit).} A logistic regression on the seven recoverable
+O-score variables (log\_TA, TL\_TA, WC\_TA, CA\_STL, net\_profit\_TA,
+NP\_DA\_TL, equity\_TA) plus the OENEG indicator. The two unavailable
+variables, INTWO and CHIN, require firm-level lags that the dataset does not
+permit.
+
+\item \textbf{Zmijewski (probit).} A probit regression on the three X-score
+variables (net\_profit\_TA, TL\_TA, CA\_STL). We retain the probit link for
+the coefficient table to stay faithful to the original specification; in the
+cross-validated scoring harness, the same three-variable specification is also
+run as a logit to keep probability extraction and calibration identical.
+\end{itemize}
+
+\paragraph{Regularized linear models.} The second family bridges the
+econometric and ML approaches: linear models that use all 75 features but
+control the resulting overfitting and multicollinearity through a penalty on
+the coefficients. We include two, which differ in the kind of penalty they
+apply.
+
+\begin{itemize}
+\item \textbf{LASSO logit.} A logistic regression on all 75 features with an
+$L_1$ penalty. The estimator solves
+\begin{equation}
+\min_{\boldsymbol{\beta}} \left[-\ell(\boldsymbol{\beta}; X, y)
++ \lambda \sum_{j=1}^{p} |\beta_j|\right],
+\label{eq:lasso-objective}
+\end{equation}
+where $\ell(\boldsymbol{\beta}; X, y)$ is the logistic log-likelihood and
+$\lambda = 1/C$ is the penalty strength. When $\lambda>0$, weak coefficients
+are shrunk toward zero, and many are set exactly to zero. The LASSO performs automatic variable selection while staying a linear model.
+The variables that survive are reported in Section~6.
+
+\item \textbf{Ridge logit.} A logistic regression on the same 75 features with
+an $L_2$ penalty,
+\begin{equation}
+\min_{\boldsymbol{\beta}} \left[-\ell(\boldsymbol{\beta}; X, y)
++ \lambda \sum_{j=1}^{p} \beta_j^2\right].
+\label{eq:ridge-objective}
+\end{equation}
+The squared penalty shrinks the coefficients toward zero but, unlike the
+LASSO, does not set any of them exactly to zero. Ridge keeps all 75 features
+in the model and is the standard tool for stabilizing a regression when the
+predictors are numerous and highly correlated, as the financial ratios here
+are. It is included for a specific reason: it is the strongest \emph{linear}
+competitor that uses exactly the same information as the tree ensembles, so
+comparing it to XGBoost isolates the value of nonlinearity from the value of a
+broad feature set. We use $C=1.0$, the standard default; performance is stable
+across the range $C \in [0.1, 10]$.
+\end{itemize}
+
+\paragraph{Machine-learning models.} The third family consists of two
+tree-based ensembles that can capture nonlinearities and interactions.
+
+\begin{itemize}
+\item \textbf{Random forest.} A random forest averages many decision trees. For
+firm $i$, the predicted probability is
+\begin{equation}
+\hat{p}_i = \frac{1}{B}\sum_{b=1}^{B} T_b(\mathbf{x}_i),
+\label{eq:rf-prediction}
+\end{equation}
+where $B$ is the number of trees and $T_b(\mathbf{x}_i)$ is the probability
+prediction from tree $b$. The trees are decorrelated by two sources of
+randomness: each tree is grown on a bootstrap resample of the training data,
+and each split considers only a random subset of the available features. This
+reduces variance relative to a single tree while preserving the ability to
+model nonlinear thresholds.
+
+\item \textbf{Gradient-boosted trees (XGBoost).} XGBoost builds an additive
+ensemble sequentially. At boosting step $t$, it adds a new tree $f_t$ by
+minimizing a regularized objective of the form
+\begin{equation}
+\mathcal{L}^{(t)} = \sum_{i=1}^{n} \ell\!\left(y_i,
+\hat{y}_i^{(t-1)} + f_t(\mathbf{x}_i)\right) + \Omega(f_t),
+\qquad
+\Omega(f_t)=\gamma T + \frac{1}{2}\lambda \sum_{j=1}^{T} w_j^2,
+\label{eq:xgb-objective}
+\end{equation}
+where $T$ is the number of leaves in the new tree and $w_j$ are the leaf
+weights \citep{chen2016}. The new tree is fitted to the gradient of the loss
+with respect to the current ensemble prediction, while the penalty discourages
+overly complex trees. This makes XGBoost a regularized boosting method rather
+than just a sequence of unconstrained trees.
+\end{itemize}
+
+All models within a given comparison use the same fold assignments and the
+same preprocessing rules. When feature sets differ, as in the classical versus
+full-feature comparisons, we interpret the gap explicitly as a mixture of
+feature-breadth and algorithmic effects rather than attributing everything to
+the algorithm.
+
+\subsection{How the tree-based models work}
+\label{sec:ml-theory}
+
+The formulas above define what each model optimizes, but the two tree-based
+methods deserve a short conceptual explanation, since they are the models that
+drive most of the results and are less familiar than logistic regression.
+
+\paragraph{Decision trees.} A decision tree is the building block of both
+ensemble methods. It splits the sample step by step: at each node it looks for
+the single feature and threshold that best separate bankrupt from healthy
+firms, for example ``operating expenses to liabilities above some cutoff,''
+then repeats the procedure inside each resulting group. The quality of a split
+is measured by how much it reduces an impurity criterion such as the Gini
+index or cross-entropy, both of which are smallest when a node contains firms
+of only one class. The appeal of a tree is that it captures nonlinearities and
+interactions automatically: a ratio can matter only in some region of its
+range, or only in combination with another ratio, without the modeler
+specifying that in advance. The drawback is that a single deep tree is
+unstable: small changes in the training data can produce a very different
+tree, which means high variance and a tendency to overfit. The two ensemble
+methods we use are different ways of controlling that variance.
+
+\paragraph{Bagging and the random forest.} A random forest grows many trees
+and averages them, as in Equation~\eqref{eq:rf-prediction}. Two devices make
+the averaging effective \citep{breiman2001}. First, each tree is trained on a
+bootstrap resample of the data, so the trees see slightly different samples.
+Second, at each split only a random subset of the features is considered, which
+stops a few strong predictors from dominating every tree and makes the trees
+less correlated with one another. Because averaging reduces variance most when
+the averaged items are weakly correlated, these two sources of randomness are
+what let the forest keep the flexibility of trees while removing much of their
+instability.
+
+\paragraph{Gradient boosting and XGBoost.} Boosting takes the opposite route to
+bagging. Instead of building many independent trees in parallel and averaging,
+it builds trees in sequence, each one correcting the errors left by the
+ensemble so far \citep{friedman2001}. At each step a new small tree is fitted
+to the gradient of the loss with respect to the current predictions, so it
+focuses on the firms the model currently gets wrong. XGBoost is a modern,
+regularized implementation of this idea \citep{chen2016}: as
+Equation~\eqref{eq:xgb-objective} shows, it adds an explicit penalty on the
+number of leaves and the size of the leaf weights, and it uses a second-order
+(Newton-style) approximation of the loss when choosing splits. The penalty is
+what keeps a long sequence of trees from overfitting, and it is the main reason
+boosting can be pushed to high accuracy on this kind of data while remaining
+reasonably well calibrated. We interpret these models after the fact using SHAP
+values in Section~\ref{sec:shap}, which is the standard tool for explaining
+tree-ensemble predictions \citep{lundberg2017}.
+
+\subsection{The unified evaluation protocol}
+
+\paragraph{Stratified five-fold cross-validation.} We randomly partition each
+horizon's data into five folds, stratified on the bankruptcy label so that
+each fold contains approximately the same default rate. Each fold serves once
+as the validation set while the other four are used for training; performance
+is averaged across the five folds. Stratification is essential here because
+the small number of bankrupt firms (271-515 per horizon) means a purely
+random split could leave some folds with very few positives.
+
+\paragraph{Class weighting instead of resampling.} To handle the class
+imbalance, we weight the minority (bankrupt) class in the loss function by
+the inverse of its frequency, rather than resampling the data. Concretely,
+each class $c$ receives weight $w_c = N / (2 N_c)$, where $N$ is the total
+number of observations and $N_c$ the number in class $c$, so that the two
+classes contribute equally to the loss. This uses all of the data and, unlike
+undersampling or SMOTE, does not distort the base rate as severely, keeping
+the predicted probabilities closer to correctly calibrated
+\citep{king2001}. We test resampling alternatives only as a robustness check
+in Section~7.
+
+\paragraph{Leakage-free imputation.} Missing ratio values are filled with the
+median, but the median is computed on the \emph{training portion of each fold
+only} and then applied to the validation fold. Computing the median on the
+full dataset before splitting would let information from the validation fold
+leak into training, a common but subtle error. The 11 missingness indicators
+are derived directly from the raw missing-value pattern, involve no
+estimation, and are therefore safe to construct once for the whole dataset.
+
+\paragraph{Identical metrics.} Every model is scored on the full battery of
+metrics described next, computed identically.
+
+\subsection{Evaluation metrics}
+
+Because no single number captures all the properties of a probabilistic
+classifier, we report metrics covering four distinct dimensions:
+discrimination, calibration, operating-point behavior, and economic cost.
+
+\paragraph{Discrimination.} These metrics measure how well a model
+\emph{ranks} firms by risk, regardless of the absolute level of the predicted
+probabilities.
+\begin{itemize}
+\item \textbf{ROC-AUC.} The area under the receiver operating characteristic
+curve. It equals the probability that a randomly chosen bankrupt firm
+receives a higher predicted probability than a randomly chosen healthy firm.
+A value of 0.5 is random guessing and 1.0 is perfect ranking.
+
+\item \textbf{PR-AUC.} The area under the precision-recall curve, also called
+average precision. \emph{Precision} is the share of firms flagged as bankrupt
+that truly are bankrupt; \emph{recall} is the share of true bankruptcies that
+the model flags. As \cite{saito2015} show, PR-AUC is more informative than
+ROC-AUC under heavy class imbalance, because the ROC curve can look strong
+even when most positive predictions are false alarms. The no-skill baseline
+for PR-AUC equals the base rate (around 0.04-0.07 here), so values well above
+that indicate genuine signal.
+
+\item \textbf{KS statistic.} The Kolmogorov-Smirnov statistic is the largest
+vertical gap between the cumulative score distributions of the bankrupt and
+healthy firms, equivalently $\max_t \big(\text{TPR}(t) - \text{FPR}(t)\big)$
+over thresholds $t$. It is a standard summary of separation in credit scoring.
+\end{itemize}
+
+\paragraph{Calibration.} These metrics measure whether the predicted
+probabilities are correct in \emph{absolute} terms, whether firms assigned
+a 10\% probability actually default about 10\% of the time.
+\begin{itemize}
+\item \textbf{Brier score.} The mean squared difference between predicted
+probability and outcome \citep{brier1950},
+\begin{equation}
+\text{Brier} = \frac{1}{N} \sum_{i=1}^{N} (\hat{p}_i - y_i)^2 .
+\label{eq:brier}
+\end{equation}
+It is a \emph{proper scoring rule}: it is minimized by reporting the true
+probabilities, and it rewards both good ranking and good calibration. Lower
+is better.
+
+\item \textbf{Expected Calibration Error (ECE).} We sort predictions into
+$M = 10$ equal-width probability bins and average the gap between the observed
+default rate and the mean predicted probability in each bin, weighted by bin
+size:
+\begin{equation}
+\text{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{N}
+\,\big|\, \text{acc}(B_m) - \text{conf}(B_m) \,\big| ,
+\label{eq:ece}
+\end{equation}
+where $|B_m|$ is the number of observations in bin $m$, $\text{acc}(B_m)$ is
+the observed default rate in the bin, and $\text{conf}(B_m)$ is the mean
+predicted probability in the bin \citep{guo2017}. ECE $= 0$ means perfectly
+calibrated probabilities.
+
+\item \textbf{Reliability diagram.} A plot of observed default rate against
+mean predicted probability across bins; a perfectly calibrated model lies on
+the 45-degree line. These are reported in Section~5.
+\end{itemize}
+
+\paragraph{Operating-point metrics.} To turn probabilities into a yes/no
+bankruptcy call we need a threshold. We choose the threshold that maximizes
+the F1 score on the bankrupt class, the harmonic mean of precision and
+recall, and at that threshold we report precision, recall (sensitivity),
+the false-positive rate (Type-I error), and the false-negative rate (Type-II
+error). Reporting both error types separately matters because they have very
+different economic consequences.
+
+\paragraph{Economic cost.} Discrimination and calibration metrics treat the
+two error types symmetrically, but in credit risk they are not. Following
+\cite{altman2007}, we assume a false negative (missing a firm that goes on to
+fail) is 35 times as costly as a false positive (a false alarm). We sweep the
+classification threshold to find the one that minimizes the total cost
+\begin{equation}
+C = c_{\text{FN}} \cdot \text{FN} + c_{\text{FP}} \cdot \text{FP},
+\qquad c_{\text{FN}} : c_{\text{FP}} = 35 : 1,
+\label{eq:cost}
+\end{equation}
+and report this minimized cost normalized by the cost of the trivial rule that
+predicts every firm to be healthy ($c_{\text{FN}} \times$ the number of true
+bankruptcies). A normalized cost below one means the model improves on that
+naive baseline; the 35:1 ratio is varied in robustness checks.
+
+\paragraph{Post-hoc recalibration.} Tree ensembles in particular are known to
+produce poorly calibrated probabilities even when they rank well
+\citep{niculescu2005}. We therefore also report calibration after a post-hoc
+fix: within each training fold we hold out 25\% of the data, fit an
+\emph{isotonic regression}, a non-parametric, monotonic mapping from raw
+scores to calibrated probabilities, on that held-out slice, and apply the
+mapping to the validation fold. Because the recalibration is fit on data not
+used to train the model and not part of the validation fold, it introduces no
+leakage. Comparing calibration before and after this step isolates how much
+of any calibration problem is fixable after the fact.
+
+\subsection{Implementation}
+
+All models are implemented in Python using scikit-learn (logistic regression,
+random forest, isotonic regression, cross-validation) and XGBoost
+(gradient-boosted trees); the probit benchmark uses statsmodels. The
+cross-validation harness fits all preprocessing inside each fold, supports
+optional feature scaling for the linear models, and computes the full metric
+battery in a single reusable function applied identically to every model. A
+fixed random seed is used throughout so that the fold assignments, and hence
+the reported results, are reproducible.
+
+\clearpage
+% =============================================================================
+\section{Results I: Econometric Baselines}\label{sec:results-econ}
+% =============================================================================
+
+We begin with the three classical models, re-estimated on the Polish data at
+the one-year horizon (H1). For each model we report two things: the estimated
+coefficients with their statistical significance (which tells us \emph{which}
+ratios matter and in \emph{which} direction), and the cross-validated
+predictive performance under the unified protocol (which tells us how well the
+model actually forecasts). These results serve as the benchmark that the
+machine-learning models in the next section must beat.
+
+\subsection{Estimated coefficients}
+
+Table~\ref{tab:econ-coef} reports the coefficients. To make the magnitudes
+comparable within each model, every continuous predictor was standardized to
+have mean zero and unit standard deviation before estimation, so each
+coefficient measures the effect of a one-standard-deviation increase in that
+ratio. For the two logit models we also report the odds ratio
+($\exp(\text{coef})$), which is the multiplicative effect on the odds of
+bankruptcy: a value below one means the ratio reduces default risk, and above
+one means it raises it.
+
+\begin{table}[ht]
+\centering
+\caption{Re-estimated econometric models at horizon H1.\textsuperscript{*}}
+\label{tab:econ-coef}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Variable & Coef. & Std.\ err. & Odds ratio & Sig. \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel A: Altman (logit, 5 ratios). Pseudo-$R^2 = 0.156$}} \\
+\midrule
+Constant            & $-2.977$ & 0.065 & 0.051 & *** \\
+WC\_TA              & $-0.358$ & 0.057 & 0.699 & *** \\
+RE\_TA              & $-0.029$ & 0.051 & 0.971 &     \\
+EBIT\_TA            & $-0.713$ & 0.058 & 0.490 & *** \\
+BE\_TL              & $ 0.054$ & 0.066 & 1.056 &     \\
+sales\_TA           & $ 0.129$ & 0.049 & 1.137 & *** \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel B: Ohlson (logit, 7 ratios + OENEG). Pseudo-$R^2 = 0.183$}} \\
+\midrule
+Constant            & $-3.047$ & 0.073 & 0.047 & *** \\
+log\_TA             & $-0.452$ & 0.060 & 0.637 & *** \\
+TL\_TA              & $-0.252$ & 0.350 & 0.777 &     \\
+WC\_TA              & $-0.462$ & 0.081 & 0.630 & *** \\
+CA\_STL             & $ 0.220$ & 0.073 & 1.246 & *** \\
+net\_profit\_TA     & $-0.483$ & 0.065 & 0.617 & *** \\
+NP\_DA\_TL          & $-0.366$ & 0.131 & 0.694 & *** \\
+equity\_TA          & $-0.395$ & 0.344 & 0.674 &     \\
+OENEG               & $-0.701$ & 0.277 & 0.496 & **  \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel C: Zmijewski (probit, 3 ratios). Pseudo-$R^2 = 0.154$}} \\
+\midrule
+Constant            & $-1.644$ & 0.029 &,   & *** \\
+net\_profit\_TA     & $-0.346$ & 0.027 &,   & *** \\
+TL\_TA              & $ 0.217$ & 0.027 &,   & *** \\
+CA\_STL             & $ 0.056$ & 0.030 &,   & *   \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*} Continuous predictors are standardized, so each
+coefficient is the effect of a one-standard-deviation increase. Odds ratios are
+reported for the two logit models. Significance: \textsuperscript{***}~$p<0.01$,
+\textsuperscript{**}~$p<0.05$, \textsuperscript{*}~$p<0.10$. Source: author's
+calculations.}
+\end{table}
+
+Three points are worth drawing out.
+
+\paragraph{Profitability is the dominant predictor in every model.} The
+operating-profitability ratio EBIT\_TA in Altman, and the net-profitability
+ratio net\_profit\_TA in Ohlson and Zmijewski, all carry large, negative,
+highly significant coefficients. In the Altman model, a one-standard-deviation
+increase in EBIT\_TA roughly halves the odds of bankruptcy (odds ratio 0.49).
+This matches both the descriptive statistics of Section~\ref{sec:descriptives}
+and the broader literature, in which profitability consistently ranks among
+the strongest distress signals.
+
+\paragraph{The sales-to-assets sign flip is confirmed.} As anticipated in
+Section~\ref{sec:descriptives}, the coefficient on sales\_TA in the Altman
+model is positive and significant (odds ratio 1.14), the opposite of the
+positive-for-health role it plays in Altman's original 1968 Z-score. In the
+Polish data, higher asset turnover is associated with \emph{higher}, not
+lower, default risk. The most plausible explanation is that firms approaching
+failure shrink their asset base, through asset sales or write-downs, in
+their final reporting year, which mechanically raises sales relative to
+assets. This is a clear example of a classical coefficient that does not
+transfer unchanged to a new institutional and temporal setting, and it
+illustrates why we re-estimate the models rather than applying the original
+weights.
+
+\paragraph{Some ratios lose significance once others are included.} RE\_TA and
+BE\_TL are individually informative in the descriptive analysis but become
+insignificant in the multivariate Altman model, because their information
+overlaps with the stronger profitability and liquidity ratios. In the Ohlson model, CA\_STL enters with a positive sign, which runs against
+simple intuition; sign reversals like this are common when several correlated
+ratios are included together. We treat the individual Ohlson coefficients with
+caution. What matters for our purposes is predictive performance.
+
+\subsection{Predictive performance}
+
+Table~\ref{tab:econ-cv} reports the cross-validated performance of the three
+models under the unified protocol: stratified five-fold cross-validation,
+class-weighted loss, and leakage-free imputation. All numbers are means across
+the five folds.
+
+\begin{table}[ht]
+\centering
+\caption{Performance of the econometric baselines at horizon H1.\textsuperscript{*}}
+\label{tab:econ-cv}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+Model & AUC & PR-AUC & KS & Brier & Recall & Precision & Norm.\ cost \\
+\midrule
+Altman (5)        & 0.772 & 0.265 & 0.478 & 0.192 & 0.476 & 0.294 & 0.335 \\
+Ohlson (7+OENEG)  & 0.795 & 0.297 & 0.507 & 0.176 & 0.463 & 0.324 & 0.312 \\
+Zmijewski (3)     & 0.776 & 0.286 & 0.460 & 0.189 & 0.478 & 0.303 & 0.322 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*} Means across five folds. AUC and PR-AUC measure ranking ability; Brier and ECE measure calibration (lower is better); recall and precision are at the F1-optimal threshold; normalized cost is relative to the naive ``predict everyone healthy'' rule (below one is better). Base rate 6.94\%. Source: author's calculations (code in Annex 1).}
+\end{table}
+
+The three models perform similarly, with Ohlson modestly ahead on most
+metrics, an AUC of 0.795 against 0.772 for Altman and 0.776 for Zmijewski,
+and the best PR-AUC, Brier score, and normalized cost. This ordering is
+sensible: Ohlson has the most predictors (eight versus five and three) and the
+highest in-sample fit (pseudo-$R^2$ of 0.18). The differences between the three are small relative to fold-to-fold
+variation, so we do not read too much into the ranking within this family.
+
+Two broader observations set up the comparison with machine learning. First,
+all three models clearly beat random guessing: an AUC near 0.78-0.80 and a
+PR-AUC of roughly 0.27-0.30 against a base rate of 0.07 represent real
+predictive signal. Second, all three are poorly calibrated out of the box, with
+expected calibration errors above 0.30 (not shown in the table but discussed
+in Section~\ref{sec:methodology}); this is a direct consequence of training
+with class weighting, which improves ranking and recall at the cost of
+inflating the predicted probabilities. We return to this calibration issue
+when we evaluate the machine-learning models, where post-hoc recalibration
+plays an important role. The headline benchmark to carry forward is an AUC of
+roughly 0.80 and a PR-AUC of roughly 0.30, achieved by the best econometric
+model (Ohlson) at the one-year horizon.
+
+Before turning to the machine-learning models, it is worth being precise about
+what these econometric results measure. The three classical models use between
+three and eight variables, all accounting ratios from a single filing date.
+Modern econometric default models, from \cite{shumway2001} onwards, augment
+these with market-based controls such as firm size, past equity returns,
+idiosyncratic volatility, and Merton-style distance-to-default, which
+\cite{campbell2008} show to be among the most informative predictors
+available. Industry effects, as in \cite{chava2004}, capture the fact that
+baseline default rates and the marginal effect of leverage differ across
+sectors. None of these controls are available in the Polish dataset, because
+the firms are private and anonymized. The three re-estimated models are
+therefore not the strongest possible econometric specification: they are the
+strongest specification feasible on this dataset. When the ML models later
+outperform them, part of that gap reflects algorithmic flexibility and a
+broader ratio set, but part reflects this structural disadvantage in control
+variables. The feature-breadth analysis in Section~\ref{sec:feature-breadth}
+is designed precisely to separate these effects.
+
+\clearpage
+% =============================================================================
+\section{Results II: Machine Learning Models and Full Comparison}\label{sec:results-ml}
+% =============================================================================
+
+We now turn to the machine-learning models and compare them, under the
+unified protocol, against the econometric benchmarks just established. The
+comparison is reported in stages. First, we look at the two regularized linear
+models, LASSO and Ridge, both fit on all 75 features. These sit between the
+hand-picked econometric models and the fully flexible tree ensembles: they use
+the broad feature set but remain linear. Then we report the random forest and
+XGBoost results and assemble the full seven-model comparison.
+
+\subsection{Regularized linear models: LASSO and Ridge}
+
+The LASSO logit is fit on all 75 features, with the $L_1$ penalty driving
+weak coefficients to exactly zero. The penalty strength $C$ is fixed at 0.1;
+performance is essentially flat across the range $C \in [0.05, 0.2]$,
+so a single value is sufficient. The
+variables that survive with non-zero coefficients are reported in
+Table~\ref{tab:lasso-survivors}.
+
+\begin{table}[ht]
+\centering
+\caption{Top variables selected by the LASSO logit, H1.\textsuperscript{*}}
+\label{tab:lasso-survivors}
+\small
+\begin{tabular}{lrl}
+\toprule
+Variable & Coef. & Interpretation \\
+\midrule
+miss\_sales\_growth        & $+4.136$ & raises risk \\
+miss\_OP\_finexp           & $+2.981$ & raises risk \\
+miss\_TL\_op\_DA\_monthly  & $-2.051$ & lowers risk \\
+sales\_STL                 & $-1.812$ & lowers risk \\
+OpEx\_STL                  & $+1.708$ & raises risk \\
+miss\_GP3yr\_TA            & $-1.313$ & lowers risk \\
+EBITDA\_TA                 & $+0.615$ & raises risk \\
+net\_profit\_TA            & $-0.581$ & lowers risk \\
+BE\_TL                     & $-0.550$ & lowers risk \\
+profit\_sales\_TA          & $-0.526$ & lowers risk \\
+GP\_extra\_fin\_TA         & $+0.457$ & raises risk \\
+CA\_inv\_STL               & $-0.442$ & lowers risk \\
+equity\_TA                 & $+0.437$ & raises risk \\
+CA\_TL                     & $+0.437$ & raises risk \\
+const\_cap\_TA             & $-0.427$ & lowers risk \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*} Penalty $C = 0.1$. Coefficients are on
+standardized predictors; positive values raise the modeled bankruptcy risk,
+negative values lower it. Of the 75 candidate features, 63 survived; the 15
+with the largest absolute coefficient are shown. Of the 11 hand-picked
+variables used by Altman, Ohlson, and Zmijewski, 8 survive the LASSO:
+net\_profit\_TA, BE\_TL, equity\_TA, log\_TA, WC\_TA, TL\_TA, CA\_STL, RE\_TA.
+Source: author's calculations (code in Annex 1).}
+\end{table}
+
+The most striking feature of Table~\ref{tab:lasso-survivors} is that the
+\emph{three largest coefficients in the entire model are missingness
+indicators rather than financial ratios}. The fact that a firm fails to
+report \texttt{sales\_growth} carries a standardized coefficient of $+4.14$,
+more than six times larger than the strongest financial ratio coefficient.
+This is striking confirmation of the informative-missingness finding
+flagged descriptively in Section~\ref{sec:missing}: \emph{whether} a
+ratio is reported is a more powerful bankruptcy signal than the
+ratio's value itself. The economic interpretation is that distressed firms
+selectively fail to disclose certain items, presumably the most damaging
+ones, and the pattern of non-disclosure is what carries the predictive
+weight. Among the ratios proper, the LASSO confirms the central role of
+profitability variants (\texttt{EBITDA\_TA}, \texttt{net\_profit\_TA},
+\texttt{profit\_sales\_TA}) and pulls in a small number of additional
+liquidity and capital-structure measures. Of the 11 variables used in the
+canonical econometric models, 8 survive the penalty, with the remaining 3
+absorbed by overlapping predictors.
+
+The cross-validated predictive performance of the LASSO is reported in the
+combined table below; here we note only that the LASSO already represents a
+substantial jump over the econometric benchmarks, with an AUC of 0.895 and a
+PR-AUC of 0.514, roughly a 10-point gain in AUC and an almost 22-point gain
+in PR-AUC over Ohlson. This jump is attributable to two things: access to the
+full 75-feature set, and explicit use of the missingness indicators that the
+hand-picked benchmarks cannot use.
+
+The Ridge logit is fit on the same 75 features but with an $L_2$ penalty,
+which shrinks the coefficients without setting any to zero, so all 75 features
+stay in the model. We use the standard default penalty ($C = 1.0$); as noted
+in Section~\ref{sec:methodology}, the result is stable across a wide range of
+$C$. Ridge is included as the strongest purely linear competitor that sees
+exactly the same information as the tree ensembles. Its performance is very
+close to the LASSO's, with an AUC of 0.877 and a PR-AUC of 0.448. The small
+gap between the two reflects only the different penalty: the LASSO discards
+the weakest features, while Ridge keeps them but shrinks them, and on this
+dataset the two strategies land in almost the same place. The point of
+including Ridge is what comes next: even a linear model that uses the entire
+feature set, with multicollinearity controlled by the penalty, still falls
+well short of the tree ensembles. That gap cannot be explained by feature
+count, since Ridge and XGBoost use the same 75 features, so it must come from
+nonlinearity. We return to this comparison in Section~\ref{sec:feature-breadth}.
+
+\subsection{Random forest and XGBoost}
+
+The two tree-based ensembles use the same 75-feature set as the LASSO. The
+random forest is fit with 300 trees and the default $\sqrt{p}$ features
+sampled at each split, with no depth cap and no hyperparameter tuning.
+XGBoost uses moderately conservative settings (400 trees, learning rate
+0.05, maximum depth 4, subsampling 0.8 on both observations and features,
+$L_2$ regularization of 1.0), with no extensive hyperparameter search , 
+the goal of the comparison is to report a defensible default rather than to
+chase the maximum achievable AUC. Both models use built-in class-imbalance
+handling consistent with the rest of the project: the random forest uses
+inverse-frequency class weights, while XGBoost uses its native
+\texttt{scale\_pos\_weight} parameter set to the ratio of healthy to
+bankrupt firms.
+
+\subsection{Full seven-model comparison}
+
+Table~\ref{tab:full-comparison} reports the cross-validated performance of
+all seven models at H1, both before and after post-hoc isotonic
+recalibration. The recalibration step fits an isotonic regression on a 25\%
+holdout slice of each training fold and applies the resulting monotonic
+mapping to the predicted probabilities of that fold's validation set; this
+isolates how much of any calibration problem is fixable after the fact.
+
+\begin{table}[ht]
+\centering
+\caption{Performance of all seven models at horizon H1, before and after
+isotonic recalibration.\textsuperscript{*}}
+\label{tab:full-comparison}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+Model & AUC & PR-AUC & KS & Brier & ECE & Recall & Norm.\ cost \\
+\midrule
+\multicolumn{8}{l}{\textit{Panel A: raw probabilities (class-weighted training, no post-hoc recalibration)}} \\
+\midrule
+Altman (5)         & 0.772 & 0.265 & 0.478 & 0.192 & 0.359 & 0.476 & 0.335 \\
+Ohlson (7+OENEG)   & 0.795 & 0.297 & 0.507 & 0.176 & 0.327 & 0.463 & 0.312 \\
+Zmijewski (3)      & 0.776 & 0.286 & 0.460 & 0.189 & 0.356 & 0.478 & 0.322 \\
+LASSO logit (75)   & 0.895 & 0.514 & 0.702 & 0.104 & 0.205 & 0.622 & 0.181 \\
+Ridge logit (75)   & 0.877 & 0.448 & 0.673 & 0.111 & 0.205 & 0.639 & 0.209 \\
+Random Forest      & 0.938 & 0.627 & 0.748 & 0.040 & 0.021 & 0.646 & 0.142 \\
+XGBoost            & 0.960 & 0.810 & 0.792 & 0.030 & 0.023 & 0.683 & 0.124 \\
+\midrule
+\multicolumn{8}{l}{\textit{Panel B: after post-hoc isotonic recalibration}} \\
+\midrule
+Altman (5)         & 0.765 & 0.237 & 0.460 & 0.059 & 0.013 & 0.522 & 0.350 \\
+Ohlson (7+OENEG)   & 0.791 & 0.253 & 0.488 & 0.058 & 0.013 & 0.541 & 0.326 \\
+Zmijewski (3)      & 0.763 & 0.244 & 0.438 & 0.059 & 0.016 & 0.515 & 0.351 \\
+LASSO logit (75)   & 0.876 & 0.457 & 0.644 & 0.046 & 0.011 & 0.615 & 0.231 \\
+Ridge logit (75)   & 0.872 & 0.423 & 0.658 & 0.047 & 0.012 & 0.576 & 0.221 \\
+Random Forest      & 0.928 & 0.557 & 0.723 & 0.041 & 0.017 & 0.583 & 0.161 \\
+XGBoost            & 0.951 & 0.747 & 0.767 & 0.028 & 0.012 & 0.624 & 0.140 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*}~Means across five folds. Recall and precision are
+measured at the F1-optimal threshold; normalized cost is relative to the naive
+``predict everyone healthy'' rule under a 35:1 false-negative to false-positive
+cost ratio. The two regularized linear models (LASSO and Ridge) use all 75
+features. Source: author's calculations (code in Annex 1).}
+\end{table}
+
+The full table now lets us read the comparison as a clear progression from
+simple to complex. The three classical models sit at AUC 0.77-0.80. The two
+regularized linear models, which use the full 75-feature set, jump to AUC
+0.88-0.90: a large gain that comes purely from giving a linear model more
+information. The two tree ensembles go further still, to 0.94-0.96, by adding
+nonlinearity on top of the broad feature set. Ridge and LASSO land very close
+to each other (AUC 0.877 versus 0.895), which is expected since they differ
+only in the type of penalty; the important point is that both clearly beat the
+classical models and both clearly lose to the tree ensembles. Three results
+are worth drawing out in more detail.
+
+\paragraph{The machine-learning advantage is large, not marginal.} The gap
+between XGBoost (AUC 0.960, PR-AUC 0.810) and Ohlson (AUC 0.795,
+PR-AUC 0.297) is 17 AUC points and over 50 PR-AUC points. This is far
+larger than the 5-10 point gap typically reported in ML-vs-econometric
+comparison studies, and it survives the unification of the evaluation
+protocol, so it cannot be dismissed as an artifact of differential class
+balancing or evaluation rules. The PR-AUC gap is particularly striking: under
+the 7\% base rate, the no-skill PR-AUC is 0.07, so XGBoost's 0.810 represents
+a nearly twelvefold lift over chance, while Ohlson's 0.297 is only a
+fourfold lift. In the rare-event regime that bankruptcy prediction is, this
+is the more economically meaningful measure than ROC-AUC.
+
+\paragraph{The advantage is concentrated where it matters: rare-event
+discrimination, not just any-event discrimination.} The ROC-AUC gap of 17
+points is large; the PR-AUC gap of 51 points is much larger. The
+interpretation is that the tree ensembles do not just slightly improve
+overall ranking, they substantially reduce false alarms among healthy
+firms while still catching a large share of bankrupt firms. Concretely, at
+the F1-optimal threshold XGBoost achieves precision of 0.83 and recall of
+0.68 on the bankrupt class, while Ohlson achieves precision of 0.32 and
+recall of 0.46. For every ten firms XGBoost flags, eight are truly distressed;
+for every ten Ohlson flags, only three are.
+
+\paragraph{Calibration and discrimination separate cleanly under
+recalibration.} Panel B of Table~\ref{tab:full-comparison} confirms the
+methodological prediction made in Section~\ref{sec:methodology}: post-hoc
+isotonic recalibration dramatically improves the Brier score and the
+expected calibration error of the class-weighted linear models (the ECE for
+the econometric baselines drops from above 0.32 to around 0.013), while
+leaving their discrimination metrics almost unchanged. The tree ensembles,
+by contrast, are already well-calibrated out of the box, Random Forest's
+ECE is 0.021 even before any post-hoc fix, and XGBoost's is 0.023, and
+recalibration leaves them essentially unchanged. This separates the two
+problems cleanly: the class-weighted linear models are systematically
+overconfident about absolute default probabilities but rank firms well;
+the tree ensembles do both well at the same time. The relative ordering of the six models is the same before and after
+recalibration: XGBoost is best on every metric, trees beat the LASSO which
+beats the econometric benchmarks, so none of the conclusions depend on
+calibration artifacts.
+
+\paragraph{Some headline numbers tell the story.} At H1, on the unified
+protocol, our best econometric model (Ohlson) flags bankrupt firms at the
+F1-optimal threshold with 32\% precision and 46\% recall; our best ML model
+(XGBoost) flags them with 83\% precision and 68\% recall. In economic-cost
+terms, under a 35:1 false-negative-to-false-positive cost ratio, XGBoost
+achieves 12\% of the cost of the trivial ``predict everyone healthy'' rule,
+while Ohlson achieves 31\%. The improvement from a classical accounting
+model to a modern tree ensemble is real, large, and concentrated exactly
+where rare-event practitioners need it.
+
+\subsection{Comparison with published results on the same dataset}
+\label{sec:litbenchmark}
+
+The numbers above are internally consistent within our protocol, but the natural
+next question is how they sit relative to what other researchers have found on
+the same Polish dataset. This matters for three reasons. First, it is a pipeline
+check: if our XGBoost were far below published results, something would be wrong
+with our implementation. Second, it locates the classical-model baselines in the
+existing literature, showing whether our Altman and Ohlson re-estimates are
+representative of how these models perform when applied outside their original
+samples. Third, and most substantively, it shows what the existing literature
+has and has not measured, which is where the original contribution of this paper
+lies.
+
+Table~\ref{tab:litbenchmark} collects the main published AUC results at the
+one-year-ahead horizon, and Figure~\ref{fig:litbenchmark} plots them in rank
+order against our key results.
+
+\begin{table}[H]
+\centering
+\caption{Published results on the Polish dataset versus ours, one-year-ahead
+horizon.\textsuperscript{*}}
+\label{tab:litbenchmark}
+\small
+\begin{tabular}{llcl}
+\toprule
+Study & Model & AUC & Method notes \\
+\midrule
+\cite{zieba2016}        & Plain logistic     & 0.632 & no resampling \\
+\cite{zieba2016}        & LDA                & 0.796 & linear discriminant \\
+\cite{zieba2016}        & Cost-sensitive logit & 0.821 & cost-weighted \\
+\cite{zieba2016}        & Random Forest      & 0.898 & 1000 trees \\
+\cite{zieba2016}        & AdaCost            & 0.928 & cost-sensitive boosting \\
+\cite{zieba2016}        & XGBoost            & 0.951 & native missing handling \\
+\cite{zieba2016}        & EXGB (their best)  & 0.955 & boosted trees + synthetic features \\
+\cite{smiti2020}        & Deep AE + Borderline-SMOTE & $>$0.95 & deep learning, oversampling \\
+\midrule
+\textbf{This paper}     & Ohlson logit (7)   & 0.795 & unified protocol \\
+\textbf{This paper}     & Ridge logit (75)   & 0.877 & unified protocol \\
+\textbf{This paper}     & Random Forest      & 0.937 & unified protocol \\
+\textbf{This paper}     & XGBoost            & 0.960 & unified protocol \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*} AUC is the metric reported across this
+literature. Published values from \cite{zieba2016} are from its 5thYear file,
+the one-year-ahead task. Differences in preprocessing mean the numbers are
+broadly, not exactly, comparable. Source: author's calculations for the ``This
+paper'' rows (code in Annex 1).}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{fig_litbenchmark.pdf}
+\caption{Our results against published benchmarks on the Polish dataset at the
+one-year-ahead horizon. Grey bars are results from \cite{zieba2016}; the blue
+bar is our econometric baseline (Ohlson); the red bar is our best model
+(XGBoost). Our XGBoost sits at the top of the published range, and our
+classical baseline sits in the same band as other classical models.}
+\label{fig:litbenchmark}
+\end{figure}
+
+\paragraph{How our results compare on the headline metric.}
+
+Our XGBoost AUC of 0.960 sits at the very top of what has been reported on this
+dataset, marginally above the 0.955 of \cite{zieba2016}'s best model (EXGB, an
+ensemble of XGBoost trees with evolved synthetic features) and above their plain
+XGBoost at 0.951. This is not a trivial result: the EXGB model in
+\cite{zieba2016} uses a purpose-built feature generation step specifically
+designed to improve discrimination on this dataset, while we use a
+straightforward off-the-shelf XGBoost with standard hyperparameters. The fact
+that the two methods reach essentially the same ceiling suggests that the
+predictive information in the dataset is largely exhausted by a well-implemented
+gradient boosting model, and that further gains would require richer data rather
+than more sophisticated algorithms.
+
+Our Random Forest at 0.937 exceeds the \cite{zieba2016} Random Forest at 0.898
+by about 4 points. The likely explanation is that we use missingness indicators
+as explicit features, which the original paper did not, and that XGBoost's
+native handling of missing values, which propagates observations in both
+directions at each split, is less effective than explicitly coding missingness
+as a signal for a random forest. Our Ohlson logit at 0.795 is close to the LDA
+result of \cite{zieba2016} at 0.796 and well above their plain logistic
+regression at 0.632. The large gap between plain logistic regression and our
+class-weighted logit confirms that the choice of imbalance treatment matters as
+much as the algorithm choice for classical models.
+
+\paragraph{Why the numbers are not exactly comparable.}
+
+Three methodological differences mean the AUC values in Table~\ref{tab:litbenchmark}
+cannot be compared as if they were produced by the same protocol.
+
+\emph{Missing-value handling.} \cite{zieba2016} exploit XGBoost's built-in
+ability to route missing values during tree splits. We instead impute medians
+and add explicit missingness indicator columns. Our approach makes the
+missingness signal available to every model, including the logit, not just to
+XGBoost. This is why our missingness-indicator approach adds value even on top
+of a model that already handles missing values internally.
+
+\emph{Resampling.} \cite{smiti2020} apply Borderline-SMOTE before
+cross-validation, meaning synthetic observations generated from the full
+dataset's neighbourhood structure are present in both training and validation
+folds. As \cite{king2001} document, this inflates predicted probabilities and
+tends to inflate AUC when the synthetic samples are informative. We apply class
+weighting only, fit entirely inside the training fold, so the validation fold
+always consists of real, unseen observations.
+
+\emph{Feature engineering.} The EXGB model of \cite{zieba2016} generates
+synthetic ratio combinations as extra features using an evolutionary algorithm.
+This is genuinely a more complex model than plain XGBoost; the fact that our
+XGBoost slightly exceeds their EXGB result without this step further supports
+the conclusion that the raw features plus missingness indicators already contain
+most of the predictable information.
+
+\paragraph{What the existing literature does not measure.}
+
+Every study in Table~\ref{tab:litbenchmark} reports ROC-AUC and, in some cases,
+accuracy or sensitivity. None reports PR-AUC, calibration, or a Brier
+decomposition. Under the 6.9\% base rate at H1, this matters. An AUC of 0.95
+by itself does not tell a practitioner how many false alarms the model generates
+per correct flag, whether the predicted probabilities can be used as such, or
+how the model's discrimination changes once calibration is corrected.
+
+Our XGBoost achieves a PR-AUC of 0.810. To put this in context: the no-skill
+baseline PR-AUC at the 6.9\% base rate is 0.069. Our model's rare-event
+precision, the fraction of flagged firms that are genuinely distressed, reaches
+83\% at a threshold calibrated to balance false positives and negatives. The
+classical models, despite sitting in the same AUC band as other classical models
+in the literature, achieve PR-AUC of only 0.27-0.30 and precision of 29-32\%.
+This gap, invisible in the ROC plot, is the main reason a practitioner would
+prefer the ML model for any application where the cost of a false alarm matters.
+
+The calibration picture adds a further dimension that the prior literature
+ignores entirely. Before isotonic recalibration, the classical models show ECE
+values of 0.33-0.36, meaning their predicted probabilities deviate from the true
+default rate by roughly 33-36 percentage points on average. XGBoost's ECE is
+0.023. After recalibration, all models achieve ECE below 0.02, but the Brier
+decomposition confirms that the sorting-power advantage of XGBoost is permanent
+and cannot be removed by post-hoc adjustments. No prior study on this dataset
+separates these two components, which makes our calibration results genuinely
+new information rather than a replication of existing findings.
+
+\paragraph{Summary.}
+
+Our results sit at or above the published ceiling on this dataset on the AUC
+metric that the prior literature reports. On the metrics the prior literature
+does not report, PR-AUC, calibration, and Brier decomposition, our results are
+the first available benchmark, and they tell a substantially different story
+about relative model performance than the headline AUC numbers alone would
+suggest.
+
+\clearpage
+% =============================================================================
+\section{Visualizing the Comparison}\label{sec:figures}
+% =============================================================================
+
+The numbers in Table~\ref{tab:full-comparison} are easier to read as pictures.
+This section presents three figures, all built from the same cross-validated
+predictions: ROC curves, precision-recall curves, and calibration
+(reliability) diagrams. All use the pooled out-of-fold predictions, meaning
+each firm's prediction comes from a fold in which that firm was not used for
+training.
+
+\subsection{ROC and precision-recall curves}
+
+Figure~\ref{fig:roc} shows the ROC curves. Each curve traces the trade-off between the true-positive rate (bankrupt
+firms correctly flagged) and the false-positive rate (healthy firms wrongly
+flagged) as the threshold moves. Closer to the top-left corner is better;
+the diagonal is random guessing. The three econometric models form a lower
+band, the LASSO sits above them, and the two tree ensembles are at the top.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{fig_roc_h1.pdf}
+\caption{ROC curves at horizon H1. Curves closer to the top-left corner
+indicate better discrimination. The tree ensembles (XGBoost, Random Forest)
+dominate the linear models, which in turn beat the hand-picked econometric
+benchmarks.}
+\label{fig:roc}
+\end{figure}
+
+Figure~\ref{fig:pr} shows the precision-recall curves, which are more
+informative under class imbalance. Precision is the share of flagged firms
+that are truly bankrupt; recall is the share of true bankruptcies the model
+flags. The dashed line is the no-skill baseline at the 6.9\% base rate.
+The gap between XGBoost and the rest is far larger here than in the ROC plot:
+XGBoost keeps high precision even at high recall, while the econometric models
+drop toward the baseline almost immediately. This is the figure that best
+captures why the ML advantage matters in practice.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{fig_pr_h1.pdf}
+\caption{Precision-recall curves at horizon H1. The dashed line is the
+no-skill baseline (the 6.9\% base rate). XGBoost keeps precision high across
+a wide range of recall, while the econometric models drop toward the baseline
+quickly. This is the most economically meaningful view for a rare-event
+problem.}
+\label{fig:pr}
+\end{figure}
+
+\subsection{Reliability diagrams}
+
+Figure~\ref{fig:reliability} shows reliability diagrams for Ohlson and
+XGBoost, before and after isotonic recalibration. Each diagram plots the
+observed default rate against the mean predicted probability across ten
+probability bins; a perfectly calibrated model lies on the 45-degree line.
+
+Before recalibration (red), both models sit well below the diagonal, meaning
+they systematically over-predict the probability of bankruptcy, an
+expected consequence of the class-weighted training described in
+Section~\ref{sec:methodology}. After recalibration (blue), both curves move
+close to the diagonal, confirming that the miscalibration is almost entirely
+fixable after the fact without changing the model's ranking. The remaining
+wobble in the high-probability bins reflects the small number of firms that
+receive such high scores, not a systematic calibration failure.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{fig_reliability_h1.pdf}
+\caption{Reliability diagrams at horizon H1, before and after isotonic
+recalibration. Points on the dashed 45-degree line are perfectly calibrated.
+Both models over-predict risk before recalibration (red, below the line) and
+are brought close to calibration afterward (blue). Recalibration changes the
+probabilities without changing the ranking, so discrimination metrics are
+essentially unaffected.}
+\label{fig:reliability}
+\end{figure}
+
+\subsection{Decomposing the Brier score}
+
+The reliability diagrams show calibration visually. The Brier score is a
+single number, but it combines two things a model can do well or badly. The decomposition of \cite{murphy1973} separates them:
+\begin{equation}
+\text{Brier} = \underbrace{\text{Reliability}}_{\text{calibration error}}
+             - \underbrace{\text{Resolution}}_{\text{sorting power}}
+             + \underbrace{\text{Uncertainty}}_{\text{fixed by the data}} .
+\label{eq:brier-decomp}
+\end{equation}
+The \emph{reliability} term is the average squared gap between each bin's
+predicted probability and the actual default rate in that bin: pure
+calibration error, lower is better. The \emph{resolution} term measures how
+far bin default rates spread away from the overall base rate: it captures
+how well the model separates firms by risk, higher is better. The
+\emph{uncertainty} term is $\bar{p}(1-\bar{p})$; it depends only on the
+data, is the same for every model (0.065 at H1), and represents the score
+of a model that simply predicts the base rate for all firms.
+
+\begin{table}[ht]
+\centering
+\caption{Brier-score decomposition at horizon H1, before and after isotonic
+recalibration. Reliability is calibration error (lower is better); resolution
+is sorting power (higher is better); uncertainty (0.065) is the same for all
+models. The three terms recombine to the Brier score via
+Equation~\ref{eq:brier-decomp}.}
+\label{tab:brier-decomp}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Model & Reliability & Resolution & Uncertainty & Brier \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel A: raw probabilities}} \\
+\midrule
+Altman (5)        & 0.134 & 0.007 & 0.065 & 0.192 \\
+Ohlson (7+OENEG)  & 0.119 & 0.008 & 0.065 & 0.176 \\
+Zmijewski (3)     & 0.131 & 0.008 & 0.065 & 0.188 \\
+LASSO logit (75)  & 0.060 & 0.021 & 0.065 & 0.104 \\
+Random Forest     & 0.002 & 0.026 & 0.065 & 0.041 \\
+XGBoost           & 0.004 & 0.037 & 0.065 & 0.031 \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel B: after isotonic recalibration}} \\
+\midrule
+Altman (5)        & 0.001 & 0.007 & 0.065 & 0.059 \\
+Ohlson (7+OENEG)  & 0.001 & 0.007 & 0.065 & 0.058 \\
+Zmijewski (3)     & 0.001 & 0.007 & 0.065 & 0.059 \\
+Random Forest     & 0.000 & 0.024 & 0.065 & 0.041 \\
+XGBoost           & 0.000 & 0.037 & 0.065 & 0.029 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize Source: author's calculations (code in Annex 1).}
+\end{table}
+
+Table~\ref{tab:brier-decomp} makes two things clear. First, the high Brier
+scores of the econometric models come almost entirely from the reliability
+term: calibration error (0.12-0.13) is roughly fifteen to twenty times
+larger than for the trees (around 0.003). Their resolution is also lower
+(0.007-0.008 versus 0.026-0.037 for the trees), so they are worse on both
+dimensions: miscalibrated and less discriminating. The trees win on both axes.
+
+Second, Panel B shows exactly what isotonic recalibration does and does not
+do. After recalibration, the reliability term collapses to essentially zero
+for every model, calibration error is almost entirely removed, while the
+resolution term barely moves (for example, XGBoost's resolution stays at
+0.037). This confirms the central methodological point of the paper.
+Calibration and discrimination are separate properties. Miscalibration is
+fixable after the fact without sacrificing sorting power, but a model's
+resolution, its genuine ability to tell risky firms from safe ones, is the
+part that cannot be recovered by post-processing and must come from the model
+itself. On that irreducible component, the gap
+between the tree ensembles and the classical models is large and permanent.
+
+\clearpage
+% =============================================================================
+\section{Performance Across Prediction Horizons}\label{sec:horizons}
+% =============================================================================
+
+All results so far use horizon H1. The dataset also provides H2 through H5,
+with predictors recorded two to five years before the event. Longer horizons
+are inherently harder: a firm five years from filing looks much more like a
+healthy firm than one that is a year away. This section asks how each model
+degrades as the horizon lengthens.
+
+We re-run all seven models on each horizon under the same protocol used at H1:
+stratified five-fold cross-validation, class weighting, leakage-free
+imputation, identical metrics. Table~\ref{tab:horizon-grid} reports AUC and
+PR-AUC across the full seven-model by five-horizon grid. Figure~\ref{fig:horizon}
+shows the ROC-AUC and PR-AUC trajectories.
+
+\begin{table}[ht]
+\centering
+\caption{Performance across prediction horizons.\textsuperscript{*}}
+\label{tab:horizon-grid}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Model & H1 & H2 & H3 & H4 & H5 \\
+\midrule
+\multicolumn{6}{l}{\textit{Panel A: ROC-AUC}} \\
+\midrule
+Altman (5)        & 0.772 & 0.700 & 0.679 & 0.611 & 0.675 \\
+Ohlson (7+OENEG)  & 0.795 & 0.665 & 0.686 & 0.580 & 0.708 \\
+Zmijewski (3)     & 0.776 & 0.698 & 0.693 & 0.633 & 0.657 \\
+LASSO logit (75)  & 0.892 & 0.865 & 0.866 & 0.819 & 0.884 \\
+Ridge logit (75)  & 0.877 & 0.857 & 0.821 & 0.799 & 0.889 \\
+Random Forest     & 0.937 & 0.915 & 0.884 & 0.879 & 0.921 \\
+XGBoost           & 0.960 & 0.938 & 0.935 & 0.927 & 0.959 \\
+\midrule
+\multicolumn{6}{l}{\textit{Panel B: PR-AUC}} \\
+\midrule
+Altman (5)        & 0.265 & 0.132 & 0.095 & 0.067 & 0.097 \\
+Ohlson (7+OENEG)  & 0.297 & 0.110 & 0.095 & 0.063 & 0.120 \\
+Zmijewski (3)     & 0.286 & 0.131 & 0.098 & 0.072 & 0.093 \\
+LASSO logit (75)  & 0.500 & 0.337 & 0.259 & 0.175 & 0.303 \\
+Ridge logit (75)  & 0.448 & 0.285 & 0.210 & 0.158 & 0.322 \\
+Random Forest     & 0.621 & 0.585 & 0.491 & 0.515 & 0.647 \\
+XGBoost           & 0.810 & 0.724 & 0.662 & 0.691 & 0.775 \\
+\midrule
+\textit{Base rate} & 0.069 & 0.053 & 0.047 & 0.039 & 0.039 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*} Means across five folds. H1 is one year ahead, H5 is five years ahead. Upper panel: ROC-AUC; lower panel: PR-AUC. Source: author's calculations (code in Annex 1).}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig_horizon.pdf}
+\caption{Model performance versus prediction horizon. Left: ROC-AUC. Right:
+PR-AUC, with the dotted line marking the no-skill base rate (which itself
+falls as the horizon lengthens because the bankruptcy rate is lower in those
+files). The tree ensembles preserve their advantage across all horizons; the
+classical econometric models collapse toward random ranking on PR-AUC by H4.}
+\label{fig:horizon}
+\end{figure}
+
+Three patterns stand out.
+
+\paragraph{The classical models fall apart at longer horizons; the trees do
+not.} On AUC, the three econometric models drop from around 0.78 at H1 to
+around 0.60-0.63 at H4, close to random guessing. XGBoost barely moves,
+slipping from 0.96 at H1 to 0.93 at H4. Random Forest behaves similarly. In
+relative terms, the AUC gap between XGBoost and the best econometric model at
+each horizon widens from about 17 percentage points at H1 to about 29 at H4.
+
+\paragraph{PR-AUC reveals the collapse even more sharply.} Altman, Ohlson,
+and Zmijewski drop to PR-AUC of 0.06-0.07 at H4, essentially the no-skill
+base rate of 0.039: they no longer sort firms meaningfully at all. XGBoost
+holds PR-AUC near 0.69, an eighteenfold lift over chance. This shows clearly
+why simple accounting-ratio models are not reliable tools for medium-term
+distress forecasting.
+
+\paragraph{H5 partly recovers; H4 is the hardest horizon.} The non-monotonic
+pattern, worst at H4 with a partial recovery at H5, appears across all six
+models, so it is a feature of the data rather than any particular method.
+The H5 file has the smallest sample (7,027 firms) and the lowest bankruptcy
+rate (3.86\%), but appears to contain a more selected group of firms whose
+financials already show clear signs of distress long before failure.
+This is a feature of how \cite{zieba2016} constructed the five files; the
+overall takeaway, that performance degrades sharply over the medium horizon
+and that the ML advantage holds throughout, is unchanged.
+
+\clearpage
+% =============================================================================
+\section{A Pooled Cross-Horizon Model: Horizon Dummies, Slopes, and Macro}\label{sec:pooled}
+% =============================================================================
+
+The horizon analysis in the previous section ran a separate model on each of
+the five files. This section instead pools all five files into one sample and uses the
+horizon structure directly, through horizon dummies and through interactions
+between the ratios and the horizon. This is the part of a panel design the
+data allow, as explained in Section~\ref{sec:panel-limits}. It lets us ask
+two questions the separate-horizon models cannot answer. First, how much of
+the cross-horizon difference is just a shift in the baseline default rate,
+as opposed to a change in how the ratios work? Second, does a ratio's
+predictive content stay the same as the horizon lengthens, or does it fade?
+
+The pooled sample stacks the five horizon files into 43,405 firm-horizon
+observations, of which 2,091 (4.82\%) are bankrupt. All models in this section
+are logistic regressions estimated on standardized accounting ratios, so the
+coefficients are comparable in size. We use the Ohlson-style ratio set, which
+is available in every file.
+
+\subsection{Horizon intercept dummies}
+
+The baseline default rate falls steadily with the horizon, from 6.94\% at H1
+to 3.86\% at H5 (Table~\ref{tab:horizon-grid}). A pooled model with a dummy for
+each horizon (H1 as the omitted base) captures this directly. All four dummies
+are strongly significant ($p < 10^{-8}$). Relative to H1, the odds of
+bankruptcy are lower at every longer horizon, with odds ratios of 0.67 at H2,
+0.60 at H3, 0.51 at H4, and 0.61 at H5. This is the dummy-variable counterpart
+of the falling base rate: a firm that looks identical on its ratios is less
+likely to fail within one year when observed further from the eventual outcome,
+simply because the outcome is further away. The dummies play the role of the
+period effects in a hazard model, absorbing the horizon-level shift in baseline
+risk.
+
+\subsection{Horizon-level macroeconomic variables}
+
+Because each horizon file corresponds to a different average position in the
+macro cycle, we can attach the horizon-level macro averages from
+Table~\ref{tab:polish-macro} to the pooled data and ask whether they add
+explanatory power. They do not, once the horizon dummies are present. The
+reason is mechanical but worth stating: each horizon has a single set of macro
+values, so the macro variables are collinear with the horizon dummies. Adding macro variables to a model that already has horizon dummies produces
+no improvement (AUC 0.71 in both cases). At the horizon level, macro
+variables and horizon dummies describe the same variation; the dummies are
+more flexible. A genuine, separable macro effect would require firm-level
+calendar dates, which the data do not provide. Reporting this null result
+explicitly is more honest than simply leaving macro out.
+
+\subsection{Do the ratio effects change with horizon?}
+
+The more interesting question is whether the financial ratios mean the same
+thing at every horizon. We test this by interacting each ratio with the horizon
+dummies, the slope-dummy idea from Section~\ref{sec:panel-limits}. A joint
+likelihood-ratio test on the full set of interaction terms strongly rejects the
+hypothesis that the ratio effects are constant across horizons
+($\chi^2 = 115.3$, 12 degrees of freedom, $p < 10^{-18}$). The ratios do behave
+differently at different distances from the event.
+
+Figure~\ref{fig:slope-horizon} shows the pattern, using single-ratio models so
+that each coefficient keeps its natural economic sign. Table~\ref{tab:slopes}
+reports the same numbers. The picture is consistent across the four ratios:
+each one is at its strongest, in absolute terms, at the one-year horizon, and
+weakens as the horizon lengthens. Profitability is the clearest example. A
+one-standard-deviation increase in net income to assets lowers the bankruptcy
+log-odds by 0.96 at H1, but by only 0.31 at H4, a drop of more than two thirds.
+Working capital behaves the same way, from $-0.74$ at H1 to $-0.41$ at H4.
+Leverage stays positive at every horizon, as expected, but its coefficient also
+shrinks from 0.67 at H1 to 0.37 at H4. The partial rebound at H5 mirrors the
+data artifact noted in Section~\ref{sec:horizons} and affects all the ratios
+together.
+
+\begin{table}[H]
+\centering
+\caption{Standardized single-ratio logit coefficients on bankruptcy by
+prediction horizon, from models that interact each ratio with the horizon
+dummies. Each coefficient is the effect of a one-standard-deviation increase in
+the ratio on the bankruptcy log-odds at that horizon.}
+\label{tab:slopes}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Ratio & H1 & H2 & H3 & H4 & H5 \\
+\midrule
+Leverage (TL/TA)          & $+0.670$ & $+0.440$ & $+0.405$ & $+0.365$ & $+0.598$ \\
+Profitability (NI/TA)     & $-0.956$ & $-0.575$ & $-0.444$ & $-0.307$ & $-0.687$ \\
+Working capital (WC/TA)   & $-0.742$ & $-0.463$ & $-0.413$ & $-0.411$ & $-0.607$ \\
+Liquidity (CA/STL)        & $-0.370$ & $-0.257$ & $-0.362$ & $-0.171$ & $-0.305$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig_slope_horizon.pdf}
+\caption{How the effect of each financial ratio on bankruptcy risk changes with
+the prediction horizon. Each line is the standardized logit coefficient from a
+single-ratio model interacted with the horizon dummies. All four ratios are
+strongest near the event (H1) and weaken as the horizon lengthens, with a
+partial rebound at H5 that reflects the same data feature seen elsewhere in the
+paper.}
+\label{fig:slope-horizon}
+\end{figure}
+
+This finding has a clear economic reading and connects back to the horizon
+degradation in Section~\ref{sec:horizons}. The classical models lose so much
+accuracy at longer horizons not because the ratios become noisier in some
+mechanical sense, but because their genuine link to bankruptcy weakens. A
+firm's current profitability says a great deal about whether it will fail
+within a year and much less about whether it will fail within four. This also
+helps explain why the tree ensembles hold up better across horizons. By
+combining many ratios and exploiting interactions, they can lean on whatever
+signal remains at longer horizons, while a model built on a few ratios with
+fixed coefficients has less to fall back on once the strongest near-term
+signals have faded.
+
+\clearpage
+% =============================================================================
+\section{Opening the Black Box: What Drives the XGBoost Predictions}\label{sec:shap}
+% =============================================================================
+
+XGBoost is the most accurate model, but unlike the logit it does not
+produce a simple table of coefficients. A natural concern is that its
+advantage comes from fitting noise or variables with no economic meaning.
+This section addresses that concern using SHAP values \citep{lundberg2017}.
+
+\subsection{What SHAP values measure}
+
+For each firm and each feature, a SHAP value measures how much that feature
+pushed the firm's predicted log-odds of bankruptcy up or down, relative to
+the average. The values come from cooperative game theory: the prediction is
+treated as a payout that is fairly split among the contributing features.
+For any firm, the SHAP values sum exactly to the gap between that firm's
+prediction and the overall average, so they give a complete account of each
+decision. Averaging absolute SHAP values across firms gives a global
+importance ranking; the spread of SHAP values for a single feature shows the
+direction and shape of its effect.
+
+\subsection{Which features matter most}
+
+Figure~\ref{fig:shap-bar} ranks the fifteen most important features by their
+mean absolute SHAP value. Two things stand out. First, the variables XGBoost
+relies on are economically sensible: operating-expense-to-liabilities
+(\texttt{OpEx\_TL}), profit margins (\texttt{profit\_sales},
+\texttt{profit\_sales\_TA}), sales growth, and several profitability ratios
+(\texttt{EBITDA\_TA}, \texttt{NP\_DA\_TL}). These are exactly the kinds of
+operating and profitability measures that the classical models also rely on,
+which is reassuring, the model is not fitting noise. Second, two of the
+top seven features are missingness flags (\texttt{miss\_OP\_finexp} and
+\texttt{miss\_sales\_growth}), confirming once again that the pattern of
+non-disclosure carries real information.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{fig_shap_bar.pdf}
+\caption{XGBoost global feature importance at horizon H1, measured by mean
+absolute SHAP value. Blue bars are financial ratios; red bars are missingness
+flags. The model relies mainly on profitability and cost ratios, with two
+missingness flags among the most important features.}
+\label{fig:shap-bar}
+\end{figure}
+
+Comparing this to the LASSO: in the linear LASSO, the missingness flags had
+the \emph{largest} coefficients of all; in XGBoost, they remain important
+but the financial ratios move to the top. The reason is that the tree
+ensemble can extract more signal from the ratios directly, through nonlinear
+thresholds and interactions, so it relies less on the missingness flags.
+
+\subsection{The direction and shape of each effect}
+
+Figure~\ref{fig:shap-beeswarm} is a beeswarm plot, which shows more than the
+ranking. Each dot is one firm; its horizontal position is that firm's SHAP
+value for the feature in that row, and its color is the value of the feature
+(red for high, blue for low). This reveals the direction of each effect.
+
+The two missingness flags show the clearest pattern: a tight cluster of red
+dots (firms where the value \emph{is} missing, so the flag equals one)
+sitting far to the right, meaning missingness sharply raises the predicted
+risk. For the financial ratios the pattern is the expected one, for cost
+and leverage measures, high values (red) tend to sit on the right
+(higher risk), while for profitability measures high values tend to sit on
+the left (lower risk). The fact that these directions line up with basic
+financial intuition is further evidence that XGBoost's accuracy rests on a
+sensible reading of the data rather than on artefacts.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{fig_shap_beeswarm.pdf}
+\caption{Per-firm SHAP values for the fifteen most important features at
+horizon H1. Each dot is a firm; horizontal position is the feature's effect
+on that firm's predicted log-odds; color is the feature value (red high, blue
+low). The missingness flags (\texttt{miss\_OP\_finexp},
+\texttt{miss\_sales\_growth}) show a clear cluster of high-value firms at far
+right, meaning a missing value sharply raises predicted risk.}
+\label{fig:shap-beeswarm}
+\end{figure}
+
+The SHAP analysis resolves the interpretability concern. XGBoost's most
+influential variables are the operating and profitability measures that
+decades of bankruptcy research has emphasized, the directions match
+financial intuition, and the predictive power of missing values shows up
+consistently across both the linear and nonlinear models.
+
+\clearpage
+% =============================================================================
+\section{Robustness Checks}\label{sec:robustness}
+% =============================================================================
+
+The main results depend on three modeling choices: median imputation of
+missing ratios, class weighting rather than resampling, and the use of the
+full 75-feature set. This section stress-tests each choice with a targeted
+check at horizon H1.
+
+\subsection{Complete-case analysis}
+
+Our headline numbers impute missing ratios and add missingness flags. To check
+that this is not creating the results artificially, we re-run the analysis on
+only the rows with no missing values at all (3{,}031 of 5{,}910 firms). This
+complete-case sample is not a random subset: it excludes the distressed firms
+whose missing values were themselves a signal, so its bankruptcy rate falls to
+3.4\% and we should expect the machine-learning edge to shrink.
+
+Table~\ref{tab:robust-cc} confirms this. XGBoost's AUC falls from 0.960 on the
+full sample to 0.897 on complete cases, and its PR-AUC from 0.810 to 0.504.
+The Ohlson logit, by contrast, holds up well and even improves slightly
+(AUC 0.866). The interpretation is consistent with the rest of the paper: a
+large part of XGBoost's advantage comes from exploiting the informative
+missingness, so when those firms are removed the gap narrows. Even so, on the
+complete-case sample XGBoost still clearly beats Ohlson on the rare-event
+metric (PR-AUC 0.504 versus 0.244), so the conclusion that machine learning
+helps is not an artefact of the imputation.
+
+\begin{table}[H]
+\centering
+\caption{Complete-case analysis at H1 (rows with no missing values,
+$n=3{,}031$, bankruptcy rate 3.4\%). Full-sample figures shown for comparison.}
+\label{tab:robust-cc}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Model & AUC & PR-AUC & Brier & Precision \\
+\midrule
+Ohlson (complete-case)  & 0.866 & 0.244 & 0.153 & 0.332 \\
+XGBoost (complete-case) & 0.897 & 0.504 & 0.026 & 0.598 \\
+\midrule
+Ohlson (full sample)    & 0.795 & 0.297 & 0.176 & 0.324 \\
+XGBoost (full sample)   & 0.960 & 0.810 & 0.030 & 0.830 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize Source: author's calculations (code in Annex 1).}
+\end{table}
+
+\subsection{SMOTE instead of class weighting}
+
+We handle the class imbalance by weighting the minority class in the loss
+function. A common alternative is SMOTE, which creates synthetic bankrupt
+firms to balance the training data \citep{chawla2002}. We re-run XGBoost with
+SMOTE applied inside each training fold (never touching the validation fold)
+and compare it to our class-weighted version. SMOTE gives slightly
+\emph{lower} discrimination (AUC 0.937 versus 0.960, PR-AUC 0.724 versus
+0.810) and a worse Brier score (0.044 versus 0.030). Class weighting is
+therefore the better choice on this dataset, and it has the additional
+advantage of not fabricating synthetic firms with financial-ratio
+combinations that may never occur in reality. This also supports the broader
+methodological point from Section~\ref{sec:lit}: resampling is not a free
+lunch, and it can quietly damage calibration.
+
+\subsection{Disentangling feature breadth from algorithmic power}
+\label{sec:feature-breadth}
+
+The previous tables show that XGBoost strongly outperforms the classical
+benchmarks. That statement is true, but it is incomplete. XGBoost is not only
+a different algorithm; it is also allowed to use a much wider set of predictors
+than the textbook Altman, Ohlson, and Zmijewski models. A fair interpretation
+therefore has to separate two channels: \emph{feature breadth}, meaning access
+to more ratios and missingness indicators, and \emph{algorithmic flexibility},
+meaning nonlinear thresholds and interactions.
+
+There is one technical point worth being strict about. The labels
+``Altman'', ``Ohlson'', and ``Zmijewski'' are not portable algorithms once the
+feature set is changed; they are specific econometric specifications defined
+by particular variables. Calling a 75-variable model ``Altman'' would be
+misleading. The companion notebook therefore extends the robustness analysis
+using a common class-weighted logit as the linear econometric algorithm and
+then compares it with LASSO, random forest, and XGBoost on four feature sets:
+Altman-5, Ohlson-7, the top-15 SHAP features, and all 75 features. This is the
+clean decomposition: logit on 75 versus logit on 5 isolates feature breadth;
+XGBoost on 75 versus logit on 75 isolates nonlinear modeling.
+
+The XGBoost slice of this decomposition is already highly informative and is
+reported in Table~\ref{tab:robust-features}. Restricting XGBoost to the five
+Altman ratios or the seven Ohlson variables caps its AUC at about 0.82. Moving
+to the top-15 SHAP variables raises AUC to 0.953 and PR-AUC to 0.788, already
+close to the full 75-feature model. This means that the gain is not produced
+by applying a sophisticated algorithm to the same handful of textbook ratios.
+It comes mainly from letting the model see a broader set of financial signals,
+including the missingness flags.
+
+\begin{table}[H]
+\centering
+\caption{XGBoost performance by feature-set size at H1. The expanded notebook
+runs the same feature-set grid for the transferable model classes (logit,
+LASSO, random forest, XGBoost) and exports the full AUC and PR-AUC matrices.
+The top-15 set is the SHAP importance ranking from Section~\ref{sec:shap}.}
+\label{tab:robust-features}
+\small
+\begin{tabular}{lccc}
+\toprule
+Feature set & Number of features & AUC & PR-AUC \\
+\midrule
+Altman 5         &  5 & 0.816 & 0.336 \\
+Ohlson 7         &  7 & 0.821 & 0.343 \\
+Top 15 (by SHAP) & 15 & 0.953 & 0.788 \\
+All 75           & 75 & 0.960 & 0.810 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize Source: author's calculations (code in Annex 1).}
+\end{table}
+
+The full picture is clearest when the same feature sets are run across all the
+model classes. Table~\ref{tab:feature-grid} reports this
+grid and Figure~\ref{fig:featuregrid} plots it (for readability the figure
+shows the four main classes; the regularized linear models are discussed
+below). Reading down a column shows the
+algorithm effect at a fixed information set; reading across a row shows the
+feature-breadth effect for a fixed algorithm. Two regularities stand out. On a
+narrow feature set (Altman-5 or Ohlson-7) the four algorithms are close
+together, with AUC clustered around 0.77--0.82, because there is little for a
+flexible model to exploit. Once the feature set widens to the top-15 or all-75
+sets, every model improves and the tree ensembles pull clearly ahead of the
+linear models. Feature breadth lifts all models; nonlinear modeling adds a
+further premium only after the broader information set is available.
+
+\begin{table}[H]
+\centering
+\caption{Performance by model class and feature set at H1.\textsuperscript{*}}
+\label{tab:feature-grid}
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & Altman-5 & Ohlson-7 & Top-15 & All-75 \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel A: ROC-AUC}} \\
+\midrule
+Logit          & 0.772 & 0.795 & 0.905 & 0.892 \\
+LASSO logit    & ---   & ---   & 0.907 & 0.895 \\
+Ridge logit    & ---   & ---   & 0.905 & 0.877 \\
+PCA logit      & ---   & ---   & ---   & 0.890 \\
+Random Forest  & 0.818 & 0.804 & 0.950 & 0.938 \\
+XGBoost        & 0.819 & 0.821 & 0.954 & 0.960 \\
+\midrule
+\multicolumn{5}{l}{\textit{Panel B: PR-AUC}} \\
+\midrule
+Logit          & 0.265 & 0.297 & 0.522 & 0.481 \\
+LASSO logit    & ---   & ---   & 0.519 & 0.514 \\
+Ridge logit    & ---   & ---   & 0.518 & 0.448 \\
+PCA logit      & ---   & ---   & ---   & 0.521 \\
+Random Forest  & 0.322 & 0.304 & 0.757 & 0.627 \\
+XGBoost        & 0.335 & 0.338 & 0.789 & 0.810 \\
+\bottomrule
+\end{tabular}
+\caption*{\footnotesize \textsuperscript{*} LASSO and Ridge are omitted on the Altman-5 and
+Ohlson-7 sets because a penalty has little role with so few predictors. PCA
+logit is reported only on the full 75-feature set, since dimensionality
+reduction is meaningful only there; it uses the principal components explaining
+95\% of the variance (about 30 components), fit inside each training fold. The
+logit row is a plain class-weighted logistic regression, not the named
+Altman/Ohlson specifications. Source: author's calculations (code in Annex 1).}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig_featuregrid.pdf}
+\caption{Decomposing the machine-learning advantage at H1. Left: ROC-AUC.
+Right: PR-AUC. Each line is one model class evaluated on feature sets of
+increasing breadth. All models improve sharply when the feature set widens,
+and the gap between the tree ensembles and the linear models opens up only at
+the broader feature sets, the visual signature of feature breadth and
+nonlinearity acting as two separate channels.}
+\label{fig:featuregrid}
+\end{figure}
+
+A natural objection to the comparison so far is that a linear model with 75
+correlated predictors is poorly specified: the financial ratios overlap
+heavily, and a logit estimated on all of them at once is unstable, which could
+understate what a linear model can really do. A standard econometric remedy is
+principal component analysis, which replaces the correlated predictors with a
+smaller set of uncorrelated components before estimation. To address this
+directly, we add a PCA logit: within each training fold we standardize the 75
+features, extract the principal components that explain 95\% of their variance
+(about 30 components), and fit the logit on those components. The PCA is fit on
+the training fold only, so the procedure stays leakage-free.
+
+This is arguably the strongest case a linear model can make on this dataset:
+it uses all of the information, and multicollinearity has been removed by
+construction. It does improve on the raw 75-feature logit, reaching an AUC of
+0.890 and a PR-AUC of 0.521 at H1, the best PR-AUC of any linear model here.
+The result is robust to the variance threshold: keeping 90\%, 95\%, or 99\% of
+the variance gives AUC of 0.880, 0.890, and 0.883 respectively. But it still
+falls well short of XGBoost (AUC 0.960, PR-AUC 0.810). Removing
+multicollinearity through PCA, in other words, does not close the gap. This
+reinforces the central decomposition: once a linear model already has the full
+feature set, neither variable selection (LASSO), coefficient shrinkage (Ridge),
+nor decorrelation (PCA) lets it match the tree ensembles. What separates them
+is nonlinearity, the ability to model thresholds and interactions among the
+ratios, not the number or correlation structure of the inputs.
+
+Table~\ref{tab:feature-decomp} gives the corresponding interpretation using
+the already available H1 numbers. The narrow-feature algorithm gain is modest:
+XGBoost on the Ohlson feature set improves AUC by only 0.026 relative to the
+Ohlson logit. By contrast, moving from the Ohlson variables to the full
+75-feature LASSO raises AUC by 0.100 and PR-AUC by 0.217 even though the model
+remains linear. Once the broad feature set is available, XGBoost adds a further
+0.065 AUC and 0.296 PR-AUC over the LASSO. The conclusion is not that
+nonlinearity is irrelevant; it clearly matters. The conclusion is sharper:
+feature breadth is a necessary condition for the ML advantage, and nonlinear
+modeling extracts additional value only after the richer information set is
+available.
+
+\begin{table}[H]
+\centering
+\caption{A simple decomposition of the H1 performance gap. Positive numbers
+are improvements in AUC or PR-AUC between the two models in the comparison.}
+\label{tab:feature-decomp}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccp{6.4cm}}
+\toprule
+Comparison & AUC gain & PR-AUC gain & Interpretation \\
+\midrule
+Ohlson logit (7) $\rightarrow$ XGBoost (Ohlson 7) & 0.026 & 0.046 & Nonlinear modeling on a narrow classical feature set adds only a small gain. \\
+Ohlson logit (7) $\rightarrow$ LASSO logit (75) & 0.100 & 0.217 & A broad feature set substantially improves a still-linear model. \\
+LASSO logit (75) $\rightarrow$ XGBoost (75) & 0.065 & 0.296 & Nonlinear thresholds and interactions add further value once the broad feature set is available. \\
+XGBoost (Altman 5) $\rightarrow$ XGBoost (75) & 0.144 & 0.474 & Holding the algorithm fixed, feature breadth produces a very large gain. \\
+\bottomrule
+\end{tabular}%
+}
+\caption*{\footnotesize Source: author's calculations (code in Annex 1).}
+\end{table}
+
+This supports the central interpretation of the paper. The ML advantage is
+real, but it should not be described as if the algorithm alone did the work.
+It is the combination of a broader accounting-ratio set, explicit missingness
+signals, and nonlinear tree ensembles that produces the large gap. This is
+consistent with \cite{barboza2017}, who also find that adding complementary
+financial indicators materially improves bankruptcy prediction across model
+classes.
+
+
+\clearpage
+% =============================================================================
+\section{Conclusion}\label{sec:conclusion}
+% =============================================================================
+
+This paper compared three classical bankruptcy models with modern
+machine-learning classifiers on the Polish Companies Bankruptcy dataset,
+using one evaluation protocol applied to every model. Keeping the protocol
+fixed means that performance differences reflect the models themselves,
+not differences in how they were trained or tested. Five findings emerge.
+
+First, the machine-learning advantage on this dataset is large, not marginal.
+At the one-year horizon, XGBoost reaches an AUC of 0.96 and a PR-AUC of 0.81,
+against 0.80 and 0.30 for the best econometric model (Ohlson). The gap is much
+wider on PR-AUC, the metric that matters most for a rare event, where XGBoost
+delivers a nearly twelvefold lift over chance.
+
+Second, the advantage is concentrated where it counts. At a common threshold,
+XGBoost flags distressed firms with 83\% precision and 68\% recall, while
+Ohlson manages 32\% and 46\%. The trees do not just improve the ranking;
+they sharply reduce false alarms while still catching most failures.
+
+Third, calibration and discrimination are separate properties, and conflating
+them is a mistake. The class-weighted linear models are badly miscalibrated
+out of the box but rank firms reasonably; the tree ensembles do both well. The
+Brier-score decomposition shows that post-hoc recalibration removes almost all
+of the calibration error without touching a model's underlying sorting power
+and on that irreducible sorting power, the tree advantage is permanent.
+
+Fourth, the advantage holds across horizons, and the pooled cross-horizon
+model explains why. As the prediction horizon lengthens from one to five years,
+the classical models decay toward random ranking on the rare-event metric,
+while the tree ensembles retain most of their power. The pooled model shows
+why this happens. When we let each ratio's effect vary by horizon, the effect
+of profitability, working capital, and leverage is strongest at the one-year
+horizon and weakens substantially further out. This pattern is jointly
+significant at $p < 10^{-18}$. Simple accounting-ratio models are therefore
+particularly ill-suited to medium-term distress forecasting, while flexible
+models that combine many ratios cope better with the weaker long-horizon
+signal.
+
+Fifth, missing values are informative. Firms close to bankruptcy
+systematically fail to report certain items, and the non-disclosure pattern
+is among the strongest predictors in the data: the largest LASSO
+coefficients and high on the XGBoost SHAP ranking. The robustness checks
+confirm that a large part of the ML edge comes from this signal, which the
+classical models cannot use.
+
+
+Taken together, these findings also clarify the paper's contribution. The
+missingness result is the main empirical addition: non-disclosure behaves like
+a distress signal rather than a random data defect. The feature-breadth
+analysis shows that the ML advantage should be decomposed rather than treated
+as a black-box algorithmic victory. Finally, the unified protocol makes the
+comparison credible, because the models differ in their structure and feature
+sets but not in the rules under which they are trained and evaluated.
+
+These findings come with limitations. Because firms are anonymized, we cannot
+follow them over time, which rules out a proper hazard model and two Ohlson
+variables that need prior-year data. The data cover Polish firms over
+2000-2013, so the exact magnitudes may not apply elsewhere, though the
+qualitative pattern, a large, robust ML advantage, likely holds more
+broadly. We also used only structured financial ratios; adding market prices
+or text disclosures could shift the balance between model types. The practical
+case for any model also depends on how errors are valued; we used one
+cost ratio, and a deployment decision would need to calibrate that
+to the user's own context.
+
+The broader message is methodological. The widely repeated claim that machine
+learning beats classical credit-scoring models is, on this dataset and under a
+fair protocol, correct. But the more useful results are the ones that a single
+accuracy number hides: where the advantage comes from, whether the
+probabilities can be trusted, how performance decays with the forecast horizon,
+and which inputs are doing the work. Reporting those is what turns a model
+comparison into evidence a practitioner can actually use.
+
+% =============================================================================
+% Bibliography
+% =============================================================================
+
+\bibliographystyle{abbrvnat}
+\clearpage
+\begin{thebibliography}{99}
+
+\bibitem[Altman(1968)]{altman1968}
+Altman, E.\ I.\ (1968).
+\newblock Financial ratios, discriminant analysis and the prediction of
+corporate bankruptcy.
+\newblock \textit{Journal of Finance}, 23(4), 589-609.
+
+\bibitem[Altman et~al.(1994)]{altman1994}
+Altman, E.\ I., Marco, G., and Varetto, F.\ (1994).
+\newblock Corporate distress diagnosis: comparisons using linear discriminant
+analysis and neural networks (the Italian experience).
+\newblock \textit{Journal of Banking \& Finance}, 18(3), 505-529.
+
+\bibitem[Altman(2000)]{altman2000}
+Altman, E.\ I.\ (2000).
+\newblock Predicting financial distress of companies: revisiting the Z-score
+and ZETA models.
+\newblock Working paper, Stern School of Business, New York University.
+
+\bibitem[Altman and Sabato(2007)]{altman2007}
+Altman, E.\ I.\ and Sabato, G.\ (2007).
+\newblock Modelling credit risk for SMEs: evidence from the US market.
+\newblock \textit{Abacus}, 43(3), 332-357.
+
+\bibitem[Barboza et~al.(2017)]{barboza2017}
+Barboza, F., Kimura, H., and Altman, E.\ (2017).
+\newblock Machine learning models and bankruptcy prediction.
+\newblock \textit{Expert Systems with Applications}, 83, 405-417.
+
+\bibitem[Breiman(2001)]{breiman2001}
+Breiman, L.\ (2001).
+\newblock Random forests.
+\newblock \textit{Machine Learning}, 45(1), 5-32.
+
+\bibitem[Brier(1950)]{brier1950}
+Brier, G.\ W.\ (1950).
+\newblock Verification of forecasts expressed in terms of probability.
+\newblock \textit{Monthly Weather Review}, 78(1), 1-3.
+
+\bibitem[Campbell et~al.(2008)]{campbell2008}
+Campbell, J.\ Y., Hilscher, J., and Szilagyi, J.\ (2008).
+\newblock In search of distress risk.
+\newblock \textit{Journal of Finance}, 63(6), 2899-2939.
+
+\bibitem[Carmona et~al.(2019)]{carmona2019}
+Carmona, P., Climent, F., and Momparler, A.\ (2019).
+\newblock Predicting failure in the U.S.\ banking sector: an extreme gradient
+boosting approach.
+\newblock \textit{International Review of Economics and Finance}, 61, 304-323.
+
+\bibitem[Chawla et~al.(2002)]{chawla2002}
+Chawla, N.\ V., Bowyer, K.\ W., Hall, L.\ O., and Kegelmeyer, W.\ P.\ (2002).
+\newblock SMOTE: synthetic minority over-sampling technique.
+\newblock \textit{Journal of Artificial Intelligence Research}, 16, 321-357.
+
+\bibitem[Cohen(1988)]{cohen1988}
+Cohen, J.\ (1988).
+\newblock \textit{Statistical Power Analysis for the Behavioral Sciences},
+2nd edition.
+\newblock Lawrence Erlbaum Associates, Hillsdale, NJ.
+
+\bibitem[Duan et~al.(2012)]{duan2012}
+Duan, J.\ C., Sun, J., and Wang, T.\ (2012).
+\newblock Multiperiod corporate default prediction, a forward intensity
+approach.
+\newblock \textit{Journal of Econometrics}, 170(1), 191-209.
+
+\bibitem[Fisher(1936)]{fisher1936}
+Fisher, R.\ A.\ (1936).
+\newblock The use of multiple measurements in taxonomic problems.
+\newblock \textit{Annals of Eugenics}, 7(2), 179-188.
+
+\bibitem[Friedman(2001)]{friedman2001}
+Friedman, J.\ H.\ (2001).
+\newblock Greedy function approximation: a gradient boosting machine.
+\newblock \textit{Annals of Statistics}, 29(5), 1189-1232.
+
+\bibitem[Guo et~al.(2017)]{guo2017}
+Guo, C., Pleiss, G., Sun, Y., and Weinberger, K.\ Q.\ (2017).
+\newblock On calibration of modern neural networks.
+\newblock \textit{Proceedings of the 34th International Conference on Machine
+Learning}, PMLR 70, 1321-1330.
+
+\bibitem[King and Zeng(2001)]{king2001}
+King, G.\ and Zeng, L.\ (2001).
+\newblock Logistic regression in rare events data.
+\newblock \textit{Political Analysis}, 9(2), 137-163.
+
+\bibitem[Lundberg and Lee(2017)]{lundberg2017}
+Lundberg, S.\ M.\ and Lee, S.-I.\ (2017).
+\newblock A unified approach to interpreting model predictions.
+\newblock \textit{Advances in Neural Information Processing Systems}, 30,
+4765-4774.
+
+\bibitem[Mai et~al.(2019)]{mai2019}
+Mai, F., Tian, S., Lee, C., and Ma, L.\ (2019).
+\newblock Deep learning models for bankruptcy prediction using textual
+disclosures.
+\newblock \textit{European Journal of Operational Research}, 274(2), 743-758.
+
+\bibitem[Min and Lee(2005)]{min2005}
+Min, J.\ H.\ and Lee, Y.\ C.\ (2005).
+\newblock Bankruptcy prediction using support vector machine with optimal
+choice of kernel function parameters.
+\newblock \textit{Expert Systems with Applications}, 28(4), 603-614.
+
+\bibitem[Merton(1974)]{merton1974}
+Merton, R.\ C.\ (1974).
+\newblock On the pricing of corporate debt: the risk structure of interest rates.
+\newblock \textit{Journal of Finance}, 29(2), 449-470.
+
+\bibitem[Mossman et~al.(1998)]{mossman1998}
+Mossman, C.\ E., Bell, G.\ G., Swartz, L.\ M., and Turtle, H.\ (1998).
+\newblock An empirical comparison of bankruptcy models.
+\newblock \textit{Financial Review}, 33(2), 35-54.
+
+\bibitem[Murphy(1973)]{murphy1973}
+Murphy, A.\ H.\ (1973).
+\newblock A new vector partition of the probability score.
+\newblock \textit{Journal of Applied Meteorology}, 12(4), 595-600.
+
+\bibitem[Niculescu-Mizil and Caruana(2005)]{niculescu2005}
+Niculescu-Mizil, A.\ and Caruana, R.\ (2005).
+\newblock Predicting good probabilities with supervised learning.
+\newblock \textit{Proceedings of the 22nd International Conference on Machine
+Learning}, 625-632.
+
+\bibitem[Odom and Sharda(1990)]{odom1990}
+Odom, M.\ D.\ and Sharda, R.\ (1990).
+\newblock A neural network model for bankruptcy prediction.
+\newblock \textit{Proceedings of the International Joint Conference on Neural
+Networks}, 2, 163-168.
+
+\bibitem[Ohlson(1980)]{ohlson1980}
+Ohlson, J.\ A.\ (1980).
+\newblock Financial ratios and the probabilistic prediction of bankruptcy.
+\newblock \textit{Journal of Accounting Research}, 18(1), 109-131.
+
+\bibitem[Pellegrino et~al.(2022)]{pellegrino2022}
+Lombardo, G., Pellegrino, M., Adosoglou, G., Cagnoni, S., Pardalos, P.\ M.,
+and Poggi, A.\ (2022).
+\newblock Machine learning for bankruptcy prediction in the American stock
+market: dataset and benchmarks.
+\newblock \textit{Future Internet}, 14(8), 244.
+
+\bibitem[Pellegrino et~al.(2024)]{pellegrino2024}
+Pellegrino, M., Lombardo, G., Adosoglou, G., Cagnoni, S., Pardalos, P.\ M.,
+and Poggi, A.\ (2024).
+\newblock A multi-head LSTM architecture for bankruptcy prediction with
+time-series accounting data.
+\newblock \textit{Future Internet}, 16(3), 79.
+
+\bibitem[Saito and Rehmsmeier(2015)]{saito2015}
+Saito, T.\ and Rehmsmeier, M.\ (2015).
+\newblock The precision-recall plot is more informative than the ROC plot
+when evaluating binary classifiers on imbalanced datasets.
+\newblock \textit{PLoS ONE}, 10(3), e0118432.
+
+\bibitem[Saerens et~al.(2002)]{saerens2002}
+Saerens, M., Latinne, P., and Decaestecker, C.\ (2002).
+\newblock Adjusting the outputs of a classifier to new a priori probabilities:
+a simple procedure.
+\newblock \textit{Neural Computation}, 14(1), 21-41.
+
+\bibitem[Shin et~al.(2005)]{shin2005}
+Shin, K.\ S., Lee, T.\ S., and Kim, H.\ J.\ (2005).
+\newblock An application of support vector machines in bankruptcy prediction
+model.
+\newblock \textit{Expert Systems with Applications}, 28(1), 127-135.
+
+\bibitem[Shumway(2001)]{shumway2001}
+Shumway, T.\ (2001).
+\newblock Forecasting bankruptcy more accurately: a simple hazard model.
+\newblock \textit{Journal of Business}, 74(1), 101-124.
+
+\bibitem[Smiti and Soui(2020)]{smiti2020}
+Smiti, S.\ and Soui, M.\ (2020).
+\newblock Bankruptcy prediction using deep learning approach based on
+borderline SMOTE.
+\newblock \textit{Information Systems Frontiers}, 22(5), 1067-1083.
+
+\bibitem[Welch(1947)]{welch1947}
+Welch, B.\ L.\ (1947).
+\newblock The generalization of `Student's' problem when several different
+population variances are involved.
+\newblock \textit{Biometrika}, 34(1-2), 28-35.
+
+\bibitem[Zięba et~al.(2016)]{zieba2016}
+Zięba, M., Tomczak, S.\ K., and Tomczak, J.\ M.\ (2016).
+\newblock Ensemble boosted trees with synthetic features generation in
+application to bankruptcy prediction.
+\newblock \textit{Expert Systems with Applications}, 58, 93-101.
+
+
+\bibitem[Chava and Jarrow(2004)]{chava2004}
+Chava, S.\ and Jarrow, R.\ (2004).
+\newblock Bankruptcy prediction with industry effects.
+\newblock \textit{Review of Finance}, 8(4), 537-569.
+
+\bibitem[Chen and Guestrin(2016)]{chen2016}
+Chen, T.\ and Guestrin, C.\ (2016).
+\newblock XGBoost: a scalable tree boosting system.
+\newblock \textit{Proceedings of the 22nd ACM SIGKDD International Conference
+on Knowledge Discovery and Data Mining}, 785-794.
+
+\bibitem[Dasilas and Rigani(2024)]{dasilas2024}
+Dasilas, A.\ and Rigani, A.\ (2024).
+\newblock Machine learning techniques in bankruptcy prediction: a systematic
+literature review.
+\newblock \textit{Expert Systems with Applications}, 255, 124761.
+
+\bibitem[Hand(2009)]{hand2009}
+Hand, D.\ J.\ (2009).
+\newblock Measuring classifier performance: a coherent alternative to the area
+under the ROC curve.
+\newblock \textit{Machine Learning}, 77(1), 103-123.
+
+\bibitem[Jones(1996)]{jones1996}
+Jones, M.\ P.\ (1996).
+\newblock Indicator and stratification methods for missing explanatory variables
+in multiple linear regression.
+\newblock \textit{Journal of the American Statistical Association}, 91(433),
+222-230.
+
+\bibitem[Jones et~al.(2017)]{jones2017}
+Jones, S., Johnstone, D., and Wilson, R.\ (2017).
+\newblock Predicting corporate bankruptcy: an evaluation of alternative
+statistical frameworks.
+\newblock \textit{Journal of Business Finance \& Accounting}, 44(1-2), 3-34.
+
+\bibitem[Kostrzewa et~al.(2025)]{kostrzewa2025}
+Kostrzewa, M.\ et~al.\ (2025).
+\newblock Are foundation models useful for bankruptcy prediction? Evidence from
+V4FinBench.
+\newblock arXiv preprint.
+
+\bibitem[Little and Rubin(2019)]{little2019}
+Little, R.\ J.\ A.\ and Rubin, D.\ B.\ (2019).
+\newblock \textit{Statistical Analysis with Missing Data}, 3rd edition.
+\newblock Wiley.
+
+\bibitem[Chakraborty and Ranjan(2024)]{granularimputation2024}
+Chakraborty, D.\ and Ranjan, R.\ (2024).
+\newblock Missing data imputation with granular semantics and AI-driven
+pipeline for bankruptcy prediction.
+\newblock arXiv:2404.00013.
+
+\bibitem[Rubin(1976)]{rubin1976}
+Rubin, D.\ B.\ (1976).
+\newblock Inference and missing data.
+\newblock \textit{Biometrika}, 63(3), 581-592.
+
+\bibitem[Zmijewski(1984)]{zmijewski1984}
+Zmijewski, M.\ E.\ (1984).
+\newblock Methodological issues related to the estimation of financial
+distress prediction models.
+\newblock \textit{Journal of Accounting Research}, 22 (Supplement), 59-82.
+
+\end{thebibliography}
+
+\clearpage
+% =============================================================================
+\appendix
+\section*{Annex 1. Key code for the reported calculations}
+\addcontentsline{toc}{section}{Annex 1. Key code for the reported calculations}
+\label{sec:appendix-code}
+% =============================================================================
+
+This annex reproduces the core of the code behind the tables marked ``Source:
+author's calculations.'' It is not the full pipeline, which loads the dataset,
+builds all 75 features, and produces every figure, but the parts that define
+how models are scored and how the less standard models (Ridge, PCA logit, and
+the pooled cross-horizon model) are estimated. All code is Python, using
+\texttt{scikit-learn}, \texttt{xgboost}, and \texttt{statsmodels}.
+
+\begin{center}
+\fbox{\parbox{0.88\textwidth}{\centering
+The complete, runnable code (a Jupyter notebook reproducing every table and
+figure), this paper's \LaTeX{} source, and all figures are available in the
+project repository:\\[6pt]
+{\small\href{https://github.com/ilyas1python/Modeling-the-Probability-of-Corporate-Default-Using-Econometric-and-Machine-Learning-Methods}%
+{\texttt{github.com/ilyas1python/Modeling-the-Probability-of-Corporate-Default-\\
+Using-Econometric-and-Machine-Learning-Methods}}}
+}}
+\end{center}
+
+\medskip
+
+\subsection*{A.1 Evaluation metrics}
+
+The two non-standard metrics are the Kolmogorov--Smirnov statistic and the
+expected calibration error. The Brier score is decomposed into reliability,
+resolution, and uncertainty by binning predictions.
+
+\begin{lstlisting}[style=python]
+def ks_statistic(y_true, y_prob):
+    """Largest gap between the true-positive and false-positive rates across
+    thresholds. 0 = no separation, 1 = perfect separation."""
+    fpr, tpr, _ = roc_curve(y_true, y_prob)
+    return float(np.max(tpr - fpr))
+
+def expected_calibration_error(y_true, y_prob, n_bins=10):
+    """Bin predictions into n_bins equal-width bins; average the gap between
+    the empirical default rate and the mean predicted probability, weighted by
+    bin size. 0 = perfectly calibrated."""
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    idx = np.clip(np.digitize(y_prob, edges[1:-1], right=False), 0, n_bins - 1)
+    N, ece = len(y_true), 0.0
+    for b in range(n_bins):
+        m = idx == b
+        nb = int(m.sum())
+        if nb:
+            ece += (nb / N) * abs(y_true[m].mean() - y_prob[m].mean())
+    return float(ece)
+\end{lstlisting}
+
+\subsection*{A.2 Unified cross-validation protocol}
+
+Every model in the paper is scored through one harness. It runs stratified
+five-fold cross-validation, imputes missing values with the training-fold
+median, optionally scales features (for linear models), optionally applies
+isotonic recalibration on an inner holdout, and returns mean metrics across
+folds. Fitting all preprocessing inside the training fold is what keeps the
+comparison leakage-free.
+
+\begin{lstlisting}[style=python]
+def run_cv(clf, X, y, num_cols, passthrough_cols=(), scale=False,
+           recalibrate=False, n_splits=5, seed=42, c_fn=35.0, c_fp=1.0):
+    """Stratified k-fold CV for any scikit-learn classifier. Returns mean and
+    std of every metric across folds. All preprocessing is fit on the training
+    fold only (leakage-free)."""
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    rows = []
+    for tr, va in skf.split(X, y):
+        # Median imputation fit on the training fold only.
+        imp = SimpleImputer(strategy='median').fit(X.iloc[tr][num_cols])
+        Xtr = np.hstack([imp.transform(X.iloc[tr][num_cols]),
+                         X.iloc[tr][list(passthrough_cols)].values])
+        Xva = np.hstack([imp.transform(X.iloc[va][num_cols]),
+                         X.iloc[va][list(passthrough_cols)].values])
+        if scale:                      # recommended for linear models
+            sc = RobustScaler().fit(Xtr)
+            Xtr, Xva = sc.transform(Xtr), sc.transform(Xva)
+        model = clone(clf).fit(Xtr, y.iloc[tr])
+        p = model.predict_proba(Xva)[:, 1]
+        if recalibrate:                # isotonic fit on an inner 25% holdout
+            p = _isotonic_recalibrate(model, Xtr, y.iloc[tr], Xva)
+        rows.append(_all_metrics(y.iloc[va].values, p, c_fn, c_fp))
+    return pd.DataFrame(rows).agg(['mean', 'std']).T
+\end{lstlisting}
+
+\subsection*{A.3 Econometric baselines and the seven models}
+
+The classical models are class-weighted logits on their original variable
+sets; the regularized linear models and tree ensembles use all 75 features.
+This is the specification list used for the main comparison and the horizon
+grid.
+
+\begin{lstlisting}[style=python]
+def _logit():
+    return LogisticRegression(class_weight='balanced', max_iter=5000,
+                              solver='lbfgs')
+
+model_specs = [
+    ('Altman (5)',       _logit(),        ALTMAN_5,    (),        True),
+    ('Ohlson (7+OENEG)', _logit(),        OHLSON_7,    ['OENEG'], True),
+    ('Zmijewski (3)',    _logit(),        ZMIJEWSKI_3, (),        True),
+    ('LASSO logit (75)', LogisticRegression(penalty='l1', solver='liblinear',
+        C=0.1, class_weight='balanced', max_iter=2000), FEATURES, MISS_INDS, True),
+    ('Ridge logit (75)', LogisticRegression(penalty='l2', solver='lbfgs',
+        C=1.0, class_weight='balanced', max_iter=2000), FEATURES, MISS_INDS, True),
+    ('Random Forest',    RandomForestClassifier(n_estimators=300,
+        max_features='sqrt', class_weight='balanced', n_jobs=2,
+        random_state=42), FEATURES, MISS_INDS, False),
+    ('XGBoost',          XGBClassifier(n_estimators=400, learning_rate=0.05,
+        max_depth=4, subsample=0.8, colsample_bytree=0.8, reg_lambda=1.0,
+        min_child_weight=5, scale_pos_weight=spw), FEATURES, MISS_INDS, False),
+]
+
+for label, clf, num_cols, pass_cols, scale in model_specs:
+    summary = run_cv(clf, X=Xh1, y=Xh1['y'], num_cols=num_cols,
+                     passthrough_cols=pass_cols, scale=scale)
+\end{lstlisting}
+
+\subsection*{A.4 PCA logit}
+
+The PCA logit answers the objection that a logit on 75 correlated ratios is
+poorly specified. Principal components are extracted inside each training fold
+(keeping 95\% of variance) and the logit is fit on the components, so the
+procedure stays leakage-free.
+
+\begin{lstlisting}[style=python]
+def pca_logit_cv(Xh, var_target=0.95, seed=42):
+    y = Xh['y'].astype(int).values
+    X = Xh[ALL_FEATURES].values
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
+    aucs, prs, ncomps = [], [], []
+    for tr, va in skf.split(X, y):
+        imp = SimpleImputer(strategy='median').fit(X[tr])
+        Xtr, Xva = imp.transform(X[tr]), imp.transform(X[va])
+        sc = StandardScaler().fit(Xtr)
+        Xtr, Xva = sc.transform(Xtr), sc.transform(Xva)
+        # PCA fit on the training fold only.
+        pca = PCA(n_components=var_target, svd_solver='full').fit(Xtr)
+        Ztr, Zva = pca.transform(Xtr), pca.transform(Xva)
+        ncomps.append(Ztr.shape[1])
+        m = LogisticRegression(class_weight='balanced', max_iter=2000,
+                               random_state=seed).fit(Ztr, y[tr])
+        p = m.predict_proba(Zva)[:, 1]
+        aucs.append(roc_auc_score(y[va], p))
+        prs.append(average_precision_score(y[va], p))
+    return np.mean(aucs), np.mean(prs), int(np.mean(ncomps))
+\end{lstlisting}
+
+\subsection*{A.5 Pooled cross-horizon model}
+
+The pooled model stacks the five horizon files, adds a dummy for each horizon,
+and interacts the financial ratios with the horizon dummies. The likelihood-ratio
+test compares the model with interactions against the model with horizon dummies
+only, testing whether the ratio effects change with the horizon.
+
+\begin{lstlisting}[style=python]
+import statsmodels.api as sm
+from scipy import stats
+
+# Stack the five horizon files with horizon dummies.
+pool = pd.concat([horizons[h].assign(horizon=h)
+                  for h in ['H1', 'H2', 'H3', 'H4', 'H5']], ignore_index=True)
+y = pool['y'].astype(int).values
+Hd = pd.get_dummies(pool['horizon'], prefix='H', drop_first=True).astype(float)
+
+# Model B: ratios + horizon intercept dummies.
+XB = pd.concat([standardize(pool[OHLSON_7]), Hd], axis=1)
+mB = sm.Logit(y, sm.add_constant(XB)).fit(disp=0)
+
+# Model D: add ratio x horizon interactions (slope dummies).
+key = ['TL_TA', 'net_profit_TA', 'WC_TA']
+inter = {f'{k}_x_{c}': X0[k].values * Hd[c].values for k in key for c in Hd.columns}
+XD = pd.concat([XB, pd.DataFrame(inter)], axis=1)
+mD = sm.Logit(y, sm.add_constant(XD)).fit(disp=0)
+
+# Likelihood-ratio test for the joint significance of the interactions.
+LR = 2 * (mD.llf - mB.llf)
+df = XD.shape[1] - XB.shape[1]
+p_value = stats.chi2.sf(LR, df)        # chi2 = 115.3, df = 12, p < 1e-18
+\end{lstlisting}
+
+
+\end{document}
